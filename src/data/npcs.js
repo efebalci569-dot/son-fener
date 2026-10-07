@@ -30,7 +30,7 @@ export const NPCS = [
     id: 'elias', name: 'Elias', title: 'Balıkçı',
     look: { coat: '#3d5a3a', pants: '#3a3530', skin: '#d8a989', hair: '#9a9590', hat: 'cap', hatColor: '#b9a37a', beard: '#b5b0aa', scarf: '#8a3a2a' },
     personality: 'Sert görünümlü ama yumuşak kalpli. Batıl inançlı, az konuşur.',
-    loves: ['lufer', 'levrek'], likes: ['sardalya', 'istavrit', 'halat', 'mantar', 'kefal'], dislikes: ['deniz_kabugu', 'yosun'], hates: ['eski_bot'],
+    loves: ['lufer', 'levrek', 'corba'], likes: ['sardalya', 'istavrit', 'halat', 'mantar', 'kefal'], dislikes: ['deniz_kabugu', 'yosun'], hates: ['eski_bot'],
     schedule: [[6, 7, 'ev_elias'], [7, 17, 'iskele_elias'], [17, 18, 'market'], [18, 22, 'bar_masa'], [22, 26, 'ev_elias']],
     rainSchedule: [[6, 9, 'ev_elias'], [9, 22, 'bar_masa'], [22, 26, 'ev_elias']],
     lines: {
@@ -56,7 +56,7 @@ export const NPCS = [
     id: 'marta', name: 'Marta', title: 'Bakkal',
     look: { coat: '#7a2f35', pants: '#4a3530', skin: '#e3b596', hair: '#8a4a2a', hat: 'none', apron: '#e8dcc0', hairStyle: 'long' },
     personality: 'Konuşkan, sıcak, meraklı. Kasabanın tüm dedikodusunu bilir.',
-    loves: ['meyve', 'mantar'], likes: ['bitki', 'deniz_kabugu', 'cipura', 'deniz_cami'], dislikes: ['hurda', 'yosun'], hates: ['eski_bot'],
+    loves: ['meyve', 'mantar', 'recel'], likes: ['bitki', 'deniz_kabugu', 'cipura', 'deniz_cami'], dislikes: ['hurda', 'yosun'], hates: ['eski_bot'],
     schedule: [[6, 8, 'ev_marta'], [8, 18, 'market'], [18, 19, 'kilise'], [19, 20, 'meydan'], [20, 26, 'ev_marta']],
     lines: {
       0: ['Hoş geldin! Yeni bekçi, değil mi? Bütün kasaba senden bahsediyor. Yani... dört kişi ama olsun.', 'Lamba yağı arıyorsan bende var. Bekçilere indirim yok ama gülümseme bedava.'],
@@ -81,7 +81,7 @@ export const NPCS = [
     id: 'tomas', name: 'Tomas', title: 'Barmen',
     look: { coat: '#4a3a2a', pants: '#2a2a2e', skin: '#c99878', hair: '#2a2420', hat: 'none', vest: '#8a6a3a', mustache: '#3a2a20', bald: true, scale: 1.08 },
     personality: 'Neşeli, esprili, geçmiş sorulunca kaçamak.',
-    loves: ['ahtapot', 'levrek'], likes: ['meyve', 'mantar', 'cipura', 'mezgit'], dislikes: ['bitki', 'tas'], hates: ['yosun'],
+    loves: ['ahtapot', 'levrek'], likes: ['meyve', 'mantar', 'cipura', 'mezgit', 'corba', 'sote'], dislikes: ['bitki', 'tas'], hates: ['yosun'],
     schedule: [[6, 11, 'ev_tomas'], [11, 12, 'iskele_tomas'], [12, 25, 'bar'], [25, 26, 'ev_tomas']],
     lines: {
       0: ['Martı Bar\'a hoş geldin! İlk içki benden. İkincisi de benden, çünkü kimse gelmiyor.', 'Bekçi! Bu barın duvarlarında yüz yıllık hikâye var. Çoğu yalan, ama iyi yalanlar.'],
@@ -102,7 +102,7 @@ export const NPCS = [
     id: 'agnes', name: 'Agnes', title: 'Yaşlı Kadın',
     look: { coat: '#4a3550', pants: '#3a3040', skin: '#e8c4aa', hair: '#e8e6e0', hat: 'shawl', hatColor: '#5a4560', scale: 0.92, cane: true },
     personality: 'Gizemli, bilge, kısa ve şifreli konuşur. Kasabanın hafızası.',
-    loves: ['bitki', 'deniz_cami'], likes: ['deniz_kabugu', 'meyve', 'mantar'], dislikes: ['hurda', 'tas'], hates: ['hayalet_balik', 'gizemli_obje'],
+    loves: ['bitki', 'deniz_cami', 'cay'], likes: ['deniz_kabugu', 'meyve', 'mantar', 'recel'], dislikes: ['hurda', 'tas'], hates: ['hayalet_balik', 'gizemli_obje'],
     schedule: [[6, 8, 'sahil_agnes'], [8, 12, 'ev_agnes'], [12, 18, 'kilise_bank'], [18, 26, 'ev_agnes']],
     rainSchedule: [[6, 26, 'ev_agnes']],
     lines: {
@@ -125,7 +125,7 @@ export const NPCS = [
     id: 'ivo', name: 'İvo', title: 'Atölye Ustası',
     look: { coat: '#2f4a6a', pants: '#2f4a6a', skin: '#d4a07c', hair: '#3a2a1a', hat: 'cap', hatColor: '#6a5a3a', goggles: true },
     personality: 'Pratik, alaycı, eli her işe yatkın. Bilmediği makine yok.',
-    loves: ['bakir', 'kristal'], likes: ['hurda', 'demir', 'gemi_parcasi', 'halat'], dislikes: ['meyve', 'bitki'], hates: ['yosun'],
+    loves: ['bakir', 'kristal'], likes: ['hurda', 'demir', 'gemi_parcasi', 'halat', 'corba'], dislikes: ['meyve', 'bitki'], hates: ['yosun'],
     schedule: [[6, 8, 'ev_ivo'], [8, 18, 'atolye'], [18, 21, 'bar_masa2'], [21, 26, 'ev_ivo']],
     lines: {
       0: ['Atölyeyi kullanabilirsin ama aletlerimi kırarsan parasını ödersin.', 'Hurda dediğin hazinedir, bekçi. Sahili iyi tara.'],
@@ -147,7 +147,7 @@ export const NPCS = [
     id: 'hale', name: 'Hale', title: 'Belediye Başkanı',
     look: { coat: '#4a4f5a', pants: '#3a3f4a', skin: '#e0b090', hair: '#1a1a1e', hat: 'bun', scarf: '#9a3a4a' },
     personality: 'Resmi, kasabanın itibarına düşkün. Geçmişi kapalı tutmak ister.',
-    loves: ['kalkan', 'cipura'], likes: ['meyve', 'deniz_cami', 'mantar'], dislikes: ['hurda', 'yosun'], hates: ['eski_bot'],
+    loves: ['kalkan', 'cipura'], likes: ['meyve', 'deniz_cami', 'mantar', 'recel', 'cay'], dislikes: ['hurda', 'yosun'], hates: ['eski_bot'],
     schedule: [[6, 9, 'ev_hale'], [9, 17, 'belediye'], [17, 19, 'meydan'], [19, 26, 'ev_hale']],
     lines: {
       0: ['Bekçi! Nihayet. Lütfen... kasabayı utandırmayalım.', 'Fener yanarsa liman ödemesi belediyeden. Gece başına. Unutma.'],
@@ -169,7 +169,7 @@ export const NPCS = [
     id: 'selin', name: 'Selin', title: 'Deniz Biyoloğu', movesIn: true,
     look: { coat: '#2a6a6a', pants: '#3a3a40', skin: '#d8a888', hair: '#2a1a14', hat: 'none', glasses: true, hairStyle: 'long', scarf: '#d8d0b8' },
     personality: 'Bilimsel, meraklı, şüpheci. Denizdeki anormallikleri ölçmeye gelmiş.',
-    loves: ['kristal_balik', 'gumus_ruh', 'fener_baligi'], likes: ['kor_balik', 'ahtapot', 'deniz_cami', 'kristal'], dislikes: ['eski_bot'], hates: ['yosun'],
+    loves: ['kristal_balik', 'gumus_ruh', 'fener_baligi'], likes: ['kor_balik', 'ahtapot', 'deniz_cami', 'kristal', 'sote', 'cay'], dislikes: ['eski_bot'], hates: ['yosun'],
     schedule: [[6, 9, 'kulube_selin'], [9, 17, 'sahil_selin'], [17, 21, 'bar_masa2'], [21, 26, 'kulube_selin']],
     lines: {
       0: ['Merhaba! Selin. Deniz biyoloğuyum. Fenerin tekrar yandığını duyunca geldim.', 'Buradaki deniz suyu sıcaklığı mevsime göre 3 derece düşük. Açıklaması yok.'],

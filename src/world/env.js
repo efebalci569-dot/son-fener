@@ -114,10 +114,10 @@ export class Environment {
     const flash = weather.flash;
 
     if (area.indoor) {
-      const cave = area.id === 'magara';
+      const cave = area.id === 'magara' || !!area.isDark?.();
       this.hemi.color.set(cave ? '#203040' : '#e8c8a0');
       this.hemi.groundColor.set(cave ? '#050608' : '#3a2a20');
-      this.hemi.intensity = cave ? 0.05 : 0.55 + (1 - this.night) * 0.35;
+      this.hemi.intensity = cave ? (area.id === 'magara' ? 0.05 : 0.16) : 0.55 + (1 - this.night) * 0.35;
       this.dir.intensity = cave ? 0 : 0.6 * (1 - this.night) + 0.1;
       this.dir.color.copy(k.sun);
       this.amb.intensity = cave ? 0.015 : 0.08;

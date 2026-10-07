@@ -12,6 +12,8 @@ export const CLUES = {
   c10: { title: 'Agnes\'in Uyarısı', source: 'Agnes', text: '"Herkes fenerin gemileri eve getirmek için yapıldığını sanır. Değil. Bu fener onları uzak tutmak için yapıldı."' },
   c11: { title: 'Kristal Pusula', source: 'Mağaranın dibi', text: 'İbresi her zaman denizin aynı noktasını gösteriyor: batı-güneybatı, ufkun ötesi. Kasasının içine "AURELIA – K.L." kazınmış.' },
   c12: { title: 'Telsiz Kaydı', source: 'Gözlem odası radyosu', text: 'Gece 03:00, 1927 frekansında: "...Aurelia\'dan karaya... konum 48 kuzey... ada... ışığı görüyoruz... bizi bekleyin..." Ardından şarkı söyleyen sesler.' },
+  c14: { title: 'Bodrumdaki Kapak', source: 'Fenerin bodrumu, gece', text: 'Fenerin temelinde denize açılan paslı bir demir kapak var. Gece altından üç kez vuruldu. Kapağın iç yüzüne tırnakla kazınmış: "BIRAKIN GİRELİM".' },
+  c15: { title: 'Duvardaki Çentikler', source: 'Fenerin bodrumu', text: 'Bodrum duvarı binlerce çentikle dolu, beşerli gruplar halinde. En sonunda Aron\'un el yazısı: "7300. gece. Yirmi yıl. Kapı yine açılacak."' },
   c13: { title: 'Liman Müdürünün Günlüğü', source: 'Tersane ofisi (Tomas)', text: '"Aurelia\'yı batarken görmedim. Kimse görmedi. Sisin içine girdi ve çıkmadı. Belediye bir rapor istedi. İmzaladım."' },
 };
 
@@ -22,6 +24,8 @@ export const DEDUCTIONS = [
   { id: 'd3', a: 'c04', b: 'c08', title: 'Yirmi Yıllık Döngü', text: 'Her yirmi yılda bir, Kasım\'ın sisli bir gecesinde biri denize çağrılıyor. 1987\'den bu yana tam yirmi yıl geçti.', quest: 'q_dongu' },
   { id: 'd4', a: 'c03', b: 'c05', title: 'Geri Dönenler', text: 'Kaybolanlar tamamen gitmiyor. Fotoğraftaki adam da, denizden gelen izler de aynı şeyi söylüyor: Geri dönüyorlar.', quest: 'q_donenler' },
   { id: 'd5', a: 'c07', b: 'c10', title: 'Işığın İki Yüzü', text: 'Mektup ışığın yanmasını istiyor; Agnes ışığın onları uzak tuttuğunu söylüyor. Işık hem bir kapı hem bir kilit olabilir mi?' },
+  { id: 'd7', a: 'c14', b: 'c05', title: 'Alttan Gelenler', text: 'Denizden gelen ayak izleri ile bodrumdaki kapak aynı şeyi anlatıyor: Fenerin altından içeri girmeye çalışan bir şey var. Kapak mühürlenmeli.', quest: 'q_muhur' },
+  { id: 'd8', a: 'c15', b: 'c08', title: 'Bekçinin Sayacı', text: 'Aron yirmi yıl boyunca her geceyi saydı. Anma tahtasındaki tarihlerle aynı: Döngüyü biliyordu ve bekliyordu.' },
   { id: 'd6', a: 'c11', b: 'c12', title: 'Koordinatlar', text: 'Pusula ve telsiz aynı noktayı gösteriyor: ufkun ötesindeki uzak ada. Aurelia\'nın yolculuğu orada bitti.', quest: 'q_ada' },
 ];
 
@@ -55,7 +59,7 @@ export const QUESTS = {
     title: 'İlk Gece', giver: 'Fener',
     desc: 'Akşam olunca (17:00 sonrası) lamba odasına çık, lambaya yağ ekle ve feneri yak.',
     steps: [{ text: 'Feneri yak', done: s => s.flags.litOnce }, { text: 'Lamba odasındaki eski notu oku', done: s => s.clues.includes('c01') }],
-    reward: { xp: ['fener', 25] }, next: ['q_orman', 'q_defter'],
+    reward: { xp: ['fener', 25] }, next: ['q_orman', 'q_defter', 'q_bodrum'],
   },
   q_olta: {
     title: 'Denizin Dili', giver: 'Elias',
@@ -98,6 +102,21 @@ export const QUESTS = {
       { text: 'Moloz yığınını temizle', done: s => s.flags.shipyardOpen },
     ],
     reward: { xp: ['kesif', 40], money: 80 },
+  },
+  q_bodrum: {
+    title: 'Fenerin Altında', giver: 'Fener',
+    desc: 'Zemin kattaki kapaktan fenerin bodrumuna in. İçerisi zifiri karanlık olabilir; bir el feneri işe yarar. Jeneratörü onarmayı dene.',
+    steps: [
+      { text: 'Bodruma in', done: s => s.flags.enteredBasement },
+      { text: 'Jeneratörü onar (4 Hurda, 2 Bakır, 1 Halat)', done: s => s.flags.rep_jenerator },
+    ],
+    reward: { xp: ['fener', 40], money: 60 },
+  },
+  q_muhur: {
+    title: 'Kapağı Mühürle', giver: 'Gizem',
+    desc: 'Bodrumdaki demir kapak denize açılıyor ve geceleri altından vuruluyor. 4 Demir Cevheri ve 2 Halat ile kapağı mühürle.',
+    steps: [{ text: 'Bodrumdaki kapağı mühürle', done: s => s.flags.hatchSealed }],
+    reward: { xp: ['fener', 60], money: 120 },
   },
   q_l2: {
     title: 'Bekçinin Evi', giver: 'Fener',

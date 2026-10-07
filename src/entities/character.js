@@ -178,6 +178,8 @@ export function animateCharacter(rig, dt, speed, pose = 'idle', t = 0) {
   else if (pose === 'sit') targetYaw = -Math.PI / 2;
   else if (pose === 'drive') targetYaw = rig.facing > 0 ? -0.2 : Math.PI + 0.2;
   else targetYaw = rig.facing > 0 ? -0.35 : Math.PI + 0.35;
+  // kuş bakışı odalarda serbest yön
+  if (rig.faceYaw !== undefined && (pose === 'idle' || pose === 'walk' || pose === 'run' || pose === 'work')) targetYaw = rig.faceYaw;
   let d = targetYaw - rig.yaw;
   while (d > Math.PI) d -= Math.PI * 2;
   while (d < -Math.PI) d += Math.PI * 2;

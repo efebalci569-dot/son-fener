@@ -69,6 +69,11 @@ export class UI {
     setTimeout(() => { cb?.(); setTimeout(() => f.classList.remove('on'), 120); }, 650);
   }
   beamHud(on) { $('beamhud').classList.toggle('show', on); }
+  placeHud(on, item) {
+    const el = $('beamhud');
+    el.classList.toggle('show', on);
+    if (on) el.innerHTML = `<b>${item.icon} ${esc(item.name)}</b> — fare/ileri: konum · <kbd>R</kbd>/sağ tık döndür · <kbd>E</kbd>/tık yerleştir · <kbd>Shift</kbd> ile devam · <kbd>Esc</kbd> vazgeç`;
+  }
   driveHud(on) {
     const el = $('beamhud');
     el.classList.toggle('show', on);
@@ -253,6 +258,10 @@ export class UI {
       this.toast('🎒 Envanter +6 yuva!', 'level'); G.audio.levelUp(); return;
     }
     if (id === 'fisek') { this.closePanel(); G.useFlare(); return; }
+    if (it.cat === 'mobilya') {
+      if (G.area.id !== 'fener_ic') { this.toast('Mobilyaları fenerin içine yerleştirebilirsin.', 'info'); return; }
+      this.closePanel(); G.decor.start(id); return;
+    }
   }
 
   // --- defter
@@ -282,7 +291,7 @@ export class UI {
     h += `<h3>Çanta (${G.inv.slotsUsed()}/${G.inv.slotsMax()})</h3><div class="grid">`;
     h += bag.map(k => this.slotHtml(k, inv[k], 'item', S.bait === k ? 'active' : '')).join('');
     for (let i = bag.length; i < G.inv.slotsMax(); i++) h += '<div class="slot empty"></div>';
-    h += '</div><p class="hint">Yemlere tıklayarak aktif yem seçebilirsin. Büyük Çanta ve İşaret Fişeği tıklanınca kullanılır.</p>';
+    h += '</div><p class="hint">Yemlere tıklayarak aktif yem seçebilirsin. Mobilyalara fenerin içindeyken tıklayınca yerleştirirsin ([B] kısayolu). Büyük Çanta ve İşaret Fişeği tıklanınca kullanılır.</p>';
     if (story.length) h += `<h3>Hikâye Eşyaları</h3><div class="grid">${story.map(k => this.slotHtml(k, 1)).join('')}</div>`;
     return h;
   }
@@ -392,7 +401,7 @@ export class UI {
       this.panel.station = station;
       const list = G.craft.visible(station);
       const S = G.state;
-      let h = `<p class="hint">${station === 'atolye' ? 'İvo\'nun atölyesi.' : 'Fenerin çalışma masası.'} Üretim Lv.${G.skills.level('crafting')}${G.skills.level('crafting') >= 5 ? ' · %20 daha az kaynak' : ''}</p>`;
+      let h = `<p class="hint">${station === 'atolye' ? 'İvo\'nun atölyesi.' : station === 'soba' ? 'Soba: malzemeleri pişir, yemekleri hediye et ya da sat.' : 'Fenerin çalışma masası. Mobilya da üretebilirsin.'} Üretim Lv.${G.skills.level('crafting')}${G.skills.level('crafting') >= 5 ? ' · %20 daha az kaynak' : ''}</p>`;
       for (const r of list) {
         const it = ITEMS[r.out];
         const need = G.craft.needFor(r).map(([i, n]) => { const have = G.craft.haveOf(i); return `<span class="need ${have >= n ? 'ok' : 'no'}">${G.craft.iconOf(i)} ${esc(G.craft.labelOf(i))} ${have}/${n}</span>`; }).join('');
@@ -609,7 +618,7 @@ export class UI {
     if (!best || (G.mode !== 'play' && !best.force)) { el.style.display = 'none'; return; }
     const label = typeof best.label === 'function' ? best.label() : best.label;
     const gy = best.wy !== undefined ? best.wy : best.node ? best.node.mesh.position.y + 1.4 : (best.npc ? best.npc.y + 2.5 : G.area.ground(best.x, G.player) + (best.y ?? 2.3));
-    const z = best.npc ? best.npc.z : best.node ? best.node.z : 0;
+    const z = best.npc ? best.npc.z : best.node ? best.node.z : (best.z ?? 0);
     const p = this.project(best.x, gy, z);
     el.style.display = 'block';
     el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
@@ -622,6 +631,7 @@ export class UI {
     if (this.reportCb && Input.wasPressed('KeyE', 'Space', 'Enter')) { this.finishReport(); return; }
     if (m === 'paused') { if (Input.wasPressed('Escape')) this.togglePause(false); return; }
     if (m === 'drive') { if (Input.wasPressed('Escape')) this.togglePause(true); return; }
+    if (m === 'place') return;
     if (m === 'panel') {
       if (Input.wasPressed('Escape') || (this.panel?.kind === 'notebook' && Input.wasPressed('Tab', 'KeyI', 'KeyJ'))) { this.closePanel(); G.audio.click(); }
       return;
@@ -632,6 +642,7 @@ export class UI {
       else if (Input.wasPressed('Escape')) this.togglePause(true);
       else if (Input.wasPressed('KeyL')) G.player.toggleLantern();
       else if (Input.wasPressed('KeyG')) G.useFlare();
+      else if (Input.wasPressed('KeyB') && G.area.id === 'fener_ic') this.openItemPicker('Yerleştirilecek mobilya', k => ITEMS[k]?.cat === 'mobilya', it => { if (it) G.decor.start(it); });
       else if (Input.wasPressed('KeyM')) { G.audio.musicOn = !G.audio.musicOn; this.toast(`Müzik ${G.audio.musicOn ? 'açık' : 'kapalı'}`, 'info', 1.5); }
     }
   }
@@ -702,7 +713,7 @@ export class UI {
       if (G.skills.level('kesif') >= 5) for (const n of G.nodes) if (n.def.hidden && n.available && n.area === 'world') h += `<span class="dot" style="left:${(n.x - min) / W * 100}%;background:#fff4c0"></span>`;
       h += `<span class="me" style="left:${(G.player.x - min) / W * 100}%"></span></div>`;
       zb.innerHTML = h;
-    } else zb.innerHTML = `<div class="areaname">${esc(G.area.name)}${G.area.id === 'fener_ic' ? ` · ${['Zemin kat', '1. kat', '2. kat', 'Lamba odası'][G.player.floor]}` : ''}</div>`;
+    } else zb.innerHTML = `<div class="areaname">${esc(G.area.name)}${G.area.id === 'fener_ic' ? ` · ${G.area.floorName(G.player.floor)}` : ''}</div>`;
     // aletler
     const tools = ['olta3', 'olta2', 'olta1', 'balta', 'kazma', 'el_feneri', 'ag', 'dalis'].filter(t => G.inv.has(t));
     const rod = tools.find(t => t.startsWith('olta'));

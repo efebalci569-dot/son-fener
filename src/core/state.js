@@ -32,6 +32,8 @@ export function newState() {
     net: null, // { day }
     player: { area: 'world', x: -63, floor: 0 },
     stats: { fish: {}, totalFish: 0, nightsLit: 0, litStreak: 0, crafted: 0 },
+    decor: { '-1': [], 0: [{ uid: 1, item: 'masa', x: 1.8, z: 2.4, rot: 0 }, { uid: 2, item: 'sandalye', x: 3.15, z: 2.5, rot: 3 }], 1: [], 2: [], 3: [] },
+    decorUid: 10,
     selinArrived: false,
     payBonus: 0,
     discount: 0,

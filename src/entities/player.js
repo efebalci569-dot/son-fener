@@ -39,10 +39,44 @@ export class Player {
 
   get area() { return G.area; }
 
-  setPos(x, floor = 0) {
-    this.x = x; this.floor = floor;
+  setPos(x, floor = 0, z = 0) {
+    this.x = x; this.floor = floor; this.z = z;
     this.y = G.area.ground(x, this);
-    this.vx = 0; this.vy = 0;
+    this.vx = 0; this.vy = 0; this.vz = 0;
+    this.rig.faceYaw = G.area.topdown ? (this.rig.faceYaw ?? -Math.PI / 2) : undefined;
+  }
+
+  // kuş bakışı (fenerin içi): serbest 2B hareket ve çarpışma
+  updateTopdown(dt, t) {
+    const area = G.area;
+    const control = canAct() && this.lock <= 0;
+    let ix = 0, iz = 0;
+    if (control) {
+      if (Input.left()) ix -= 1;
+      if (Input.right()) ix += 1;
+      if (Input.up()) iz -= 1;
+      if (Input.down()) iz += 1;
+    }
+    const len = Math.hypot(ix, iz) || 1;
+    const run = Input.isDown('ShiftLeft', 'ShiftRight');
+    const max = (run ? 5.4 : 3.4) * this.speed();
+    this.vx = damp(this.vx, ix / len * max, ix ? 14 : 18, dt);
+    this.vz = damp(this.vz ?? 0, iz / len * max, iz ? 14 : 18, dt);
+    const nx = this.x + this.vx * dt, nz = this.z + this.vz * dt;
+    if (!area.blocked(this.floor, nx, this.z)) this.x = nx; else this.vx = 0;
+    if (!area.blocked(this.floor, this.x, nz)) this.z = nz; else this.vz = 0;
+    if (ix || iz) { this.rig.faceYaw = Math.atan2(-iz, ix); this.rig.facing = ix >= 0 ? 1 : -1; }
+    this.y = 0;
+    if (this.lock > 0) this.lock -= dt;
+    const spd = Math.hypot(this.vx, this.vz);
+    this.pose = this.lock > 0 ? this.lockPose : spd > 4 ? 'run' : spd > 0.3 ? 'walk' : 'idle';
+    animateCharacter(this.rig, dt, spd * 1.25, this.pose, t);
+    this.rig.root.position.set(this.x, this.y, this.z);
+    if (this.pose === 'walk' || this.pose === 'run') {
+      const ph = Math.floor(this.rig.phase / Math.PI);
+      if (ph !== this.lastStep) { this.lastStep = ph; G.audio.footstep(this.floor === -1 ? 'stone' : 'wood'); }
+    }
+    this.updateLantern(dt, t);
   }
 
   doAction(seconds, pose = 'work') { this.lock = seconds; this.lockPose = pose; }
@@ -67,6 +101,7 @@ export class Player {
       return;
     }
     this.rig.root.rotation.set(0, 0, 0);
+    if (area.topdown) { this.updateTopdown(dt, t); return; }
     const control = canAct() && this.lock <= 0;
     let target = 0, running = false;
     if (control) {

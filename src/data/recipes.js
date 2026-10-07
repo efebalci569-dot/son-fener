@@ -24,6 +24,29 @@ export const RECIPES = [
   { id: 'r_olta3', out: 'olta3', n: 1, in: [['kristal', 3], ['demir', 4], ['gizemli_obje', 1]], xp: 40, unlock: s => s.skillsLv.crafting >= 7, once: true },
 ];
 
+// Mobilyalar (her çalışma masasında)
+RECIPES.push(
+  { id: 'm_sandalye', out: 'sandalye', n: 1, in: [['odun', 4]], xp: 4, unlock: () => true },
+  { id: 'm_masa', out: 'masa', n: 1, in: [['odun', 7]], xp: 5, unlock: () => true },
+  { id: 'm_saksi', out: 'saksi', n: 1, in: [['bitki', 2], ['tas', 1]], xp: 4, unlock: () => true },
+  { id: 'm_fici', out: 'fici', n: 1, in: [['odun', 5], ['hurda', 1]], xp: 4, unlock: () => true },
+  { id: 'm_hali', out: 'hali', n: 1, in: [['halat', 3], ['bitki', 2]], xp: 6, unlock: () => true },
+  { id: 'm_kabuk', out: 'kabuk_rafi', n: 1, in: [['odun', 3], ['deniz_kabugu', 5]], xp: 6, unlock: () => true },
+  { id: 'm_lamba', out: 'gaz_lambasi', n: 1, in: [['hurda', 2], ['deniz_cami', 1], ['lamba_yagi', 1]], xp: 6, unlock: () => true },
+  { id: 'm_kitaplik', out: 'kitaplik', n: 1, in: [['odun', 8], ['eski_esya', 1]], xp: 8, unlock: () => true },
+  { id: 'm_maket', out: 'gemi_maketi', n: 1, in: [['odun', 3], ['halat', 1], ['gemi_parcasi', 1]], xp: 8, unlock: () => true },
+  { id: 'm_koltuk', out: 'koltuk', n: 1, in: [['odun', 6], ['halat', 3]], xp: 8, unlock: s => s.lighthouse.level >= 2 },
+  { id: 'm_akvaryum', out: 'akvaryum', n: 1, in: [['deniz_cami', 4], ['hurda', 2], [{ tag: 'balik' }, 2]], xp: 10, unlock: s => s.lighthouse.level >= 2 },
+  { id: 'm_fener', out: 'fener_maketi', n: 1, in: [['kristal', 1], ['deniz_cami', 3], ['tas', 2]], xp: 10, unlock: s => s.lighthouse.level >= 3 },
+);
+// Yemekler (onarılmış sobada)
+RECIPES.push(
+  { id: 'y_corba', out: 'corba', n: 1, in: [[{ tag: 'balik' }, 2], ['bitki', 1]], xp: 5, station: 'soba', unlock: () => true },
+  { id: 'y_sote', out: 'sote', n: 1, in: [['mantar', 2], ['bitki', 1]], xp: 5, station: 'soba', unlock: () => true },
+  { id: 'y_recel', out: 'recel', n: 1, in: [['meyve', 3]], xp: 4, station: 'soba', unlock: () => true },
+  { id: 'y_cay', out: 'cay', n: 2, in: [['bitki', 2]], xp: 3, station: 'soba', unlock: () => true },
+);
+
 // Fener geliştirmeleri
 export const LIGHTHOUSE_UPGRADES = {
   2: { cost: { odun: 20, tas: 10, hurda: 6 }, money: 300, title: 'Bekçinin Evi', perks: ['Yeni yatak', 'Depolama sandığı tarifi', 'Basit çalışma masası', 'Daha güçlü ışık'] },

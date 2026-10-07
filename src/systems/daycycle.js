@@ -148,7 +148,7 @@ export const Day = {
 
     G.ui.dayReport(S.day, this.weekday(), report, () => {
       // fenerde uyan
-      G.setArea('fener_ic', 3000 + 1.4, 0);
+      const w = G.areas.fener_ic.wakeSpot(); G.setArea('fener_ic', w.x, 0, w.z);
       for (const npc of G.npcs) npc.teleport(6);
       this.lastHour = 6;
       saveGame(S);

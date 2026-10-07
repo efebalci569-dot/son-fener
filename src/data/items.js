@@ -49,6 +49,28 @@ export const ITEMS = {
   karides: { name: 'Karides Yemi', icon: '🦐', cat: 'yem', price: 8, desc: 'Yem. Büyük balıkları cezbeder.' },
   parlak_yem: { name: 'Parlak Yem', icon: '✨', cat: 'yem', price: 20, desc: 'Yem. Gece balıkları buna dayanamaz.' },
 
+  // --- Mobilya (fenerin içine yerleştirilir) ---
+  sandalye: { name: 'Sandalye', icon: '🪑', cat: 'mobilya', price: 20, desc: 'Basit ama sağlam. Tıkla → fenerde yerleştir.' },
+  masa: { name: 'Ahşap Masa', icon: '🍽️', cat: 'mobilya', price: 35, desc: 'Akşam yemekleri için. Tıkla → yerleştir.' },
+  hali: { name: 'Örgü Halı', icon: '🧶', cat: 'mobilya', price: 40, desc: 'Taş zemini ısıtır. Üzerine eşya konabilir.' },
+  saksi: { name: 'Saksı Bitki', icon: '🪴', cat: 'mobilya', price: 25, desc: 'Biraz yeşillik iyi gelir.' },
+  kitaplik: { name: 'Kitaplık', icon: '📚', cat: 'mobilya', price: 70, desc: 'Eski bekçinin kitaplarıyla dolu.' },
+  gaz_lambasi: { name: 'Gaz Lambası', icon: '🪔', cat: 'mobilya', price: 45, desc: 'Odayı sıcak bir ışıkla aydınlatır.' },
+  kabuk_rafi: { name: 'Kabuk Rafı', icon: '🗄️', cat: 'mobilya', price: 40, desc: 'Sahil koleksiyonun için.' },
+  gemi_maketi: { name: 'Gemi Maketi', icon: '⛵', cat: 'mobilya', price: 60, desc: 'Üç direkli, tanıdık bir gemi.' },
+  fici: { name: 'Fıçı', icon: '🪣', cat: 'mobilya', price: 25, desc: 'Her fenerde bir fıçı olmalı.' },
+  koltuk: { name: 'Koltuk', icon: '🛋️', cat: 'mobilya', price: 80, desc: 'Fırtınalı gecelerde oturmak için.' },
+  akvaryum: { name: 'Akvaryum', icon: '🫧', cat: 'mobilya', price: 110, desc: 'İçinde küçük renkli balıklar yüzüyor.' },
+  gramofon: { name: 'Gramofon', icon: '🎶', cat: 'mobilya', price: 150, desc: 'Eski bir vals çalar.' },
+  fener_maketi: { name: 'Fener Maketi', icon: '🗼', cat: 'mobilya', price: 90, desc: 'Minik ışığı gerçekten yanıyor.' },
+  tablo: { name: 'Deniz Tablosu', icon: '🖼️', cat: 'mobilya', price: 60, desc: 'Gün batımında bir fener.' },
+
+  // --- Yemek (sobada pişer) ---
+  corba: { name: 'Balık Çorbası', icon: '🍲', cat: 'yemek', price: 65, desc: 'Sıcak, tuzlu, iç ısıtan.' },
+  sote: { name: 'Mantar Sote', icon: '🍳', cat: 'yemek', price: 50, desc: 'Ormanın kokusu tavada.' },
+  recel: { name: 'Yabani Meyve Reçeli', icon: '🫙', cat: 'yemek', price: 45, desc: 'Marta\'nın büyükannesi gururlanırdı.' },
+  cay: { name: 'Bitki Çayı', icon: '🍵', cat: 'yemek', price: 30, desc: 'Agnes\'in tarifi.' },
+
   // --- Hikâye ---
   fener_anahtari: { name: 'Fener Anahtarı', icon: '🗝️', cat: 'hikaye', price: 0, desc: 'Ağır, pirinç bir anahtar. Üzerinde "1889" yazıyor.' },
   jonas_agi: { name: 'Jonas\'ın Ağı', icon: '🧶', cat: 'hikaye', price: 0, desc: 'Yirmi yıldır kurumamış gibi nemli.' },

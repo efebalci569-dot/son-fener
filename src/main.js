@@ -16,7 +16,9 @@ import { Sky } from './world/sky.js';
 import { Sea, setWaveScale } from './world/sea.js';
 import { Weather } from './world/weather.js';
 import { buildWorld, LIGHTHOUSE_X } from './world/world.js';
-import { buildLighthouseInterior, buildCave, buildSeaArea, FENER_X } from './world/interiors.js';
+import { buildCave, buildSeaArea } from './world/interiors.js';
+import { buildLighthouseInterior } from './world/lighthouse.js';
+import { Decor } from './systems/decor.js';
 import { groundY, WORLD_MAX_X, STRAIT } from './world/terrain.js';
 import { Sandal } from './systems/sandal.js';
 import { Player } from './entities/player.js';
@@ -121,6 +123,7 @@ G.areas.world = {
   ground: x => groundY(x), cam: { dist: 16, height: 3.4, look: 1.55, yawX: 1.6 }, refresh() { }, update() { },
 };
 G.areas.fener_ic = buildLighthouseInterior(G);
+G.decor = new Decor();
 G.areas.magara = buildCave(G);
 G.areas.deniz = buildSeaArea(G);
 G.area = G.areas.world;
@@ -131,7 +134,7 @@ G.fishing = new Fishing();
 G.lamp = new Lamp();
 G.night = new Night();
 G.sandal = new Sandal();
-G.interactables = buildInteractions();
+G.interactables = [...buildInteractions(), ...G.areas.fener_ic.interactables()];
 
 G.world.refreshBoat = () => {
   const b = G.state.boat.level >= 1;
@@ -147,12 +150,13 @@ function updateAreaVisibility() {
 }
 updateAreaVisibility();
 
-G.setArea = (id, x, floor = 0) => {
+G.setArea = (id, x, floor = 0, z = 0) => {
+  if (G.decor.placing) G.decor.cancel(true);
   G.area = G.areas[id];
   updateAreaVisibility();
   G.player.floor = floor;
-  G.player.setPos(x, floor);
-  G.state.player = { area: id, x, floor };
+  G.player.setPos(x, floor, z);
+  G.state.player = { area: id, x, floor, z };
   if (id === 'world') G.sandal.placeForPlayer(x);
   G.sea.mesh.visible = G.area.showSea;
   for (const o of [G.sky.dome, G.sky.stars, G.sky.sun, G.sky.moon, G.sky.clouds]) o.visible = !G.area.indoor;
@@ -164,15 +168,27 @@ G.setArea = (id, x, floor = 0) => {
 };
 
 G.changeFloor = (f) => {
+  const from = G.player.floor;
   G.audio.footstep('wood');
+  G.mode = 'cutscene';
   G.ui.fade(() => {
+    const a = G.areas.fener_ic.arrival(f, from);
     G.player.floor = f;
-    G.player.setPos(f > (G.player._lastFloor ?? 0) ? FENER_X + 3.0 : FENER_X - 3.2, f);
-    G.player._lastFloor = f;
-    G.state.player.floor = f;
+    G.player.rig.faceYaw = -Math.PI / 2;
+    G.player.setPos(a.x, f, a.z);
+    G.state.player = { area: 'fener_ic', x: a.x, floor: f, z: a.z };
     G.camSnap = true;
+    G.mode = 'play';
+    if (f === -1) {
+      G.state.flags.enteredBasement = true; G.quests.check();
+      if (G.inv.has('el_feneri')) G.player.lanternOn = true;
+      else if (!G.state.flags.rep_jenerator) G.ui.toast('Zifiri karanlık. Bir el feneri iyi olurdu...', 'mystery', 4);
+      G.audio.setAmbient({ cave: 1 });
+      if (!G.state.flags.basementIntro) { G.state.flags.basementIntro = true; setTimeout(() => G.ui.ambientLine('Nem, pas ve tuz kokusu. Aşağıdan dalga sesleri geliyor.'), 600); }
+    } else G.audio.setAmbient({ cave: 0 });
+    G.ui.zoneTitle(G.areas.fener_ic.floorName(f));
   });
-  setTimeout(() => G.audio.footstep('wood'), 250);
+  setTimeout(() => G.audio.footstep(f === -1 ? 'stone' : 'wood'), 250);
 };
 
 // İşaret fişeği
@@ -204,13 +220,18 @@ function applyState(S) {
   G.night.cleanup();
   for (const npc of G.npcs) npc.teleport(G.hour);
   Day.lastHour = Math.floor(G.hour);
-  let { area, x, floor } = S.player;
+  let { area, x, floor, z } = S.player;
   if (area === 'deniz' || !G.areas[area]) { area = 'world'; x = 37; floor = 0; }
   G.sandal.stopDriving();
   if (!S.sandalSide) S.sandalSide = area === 'fener_ic' || (area === 'world' && x > 137) ? 'island' : 'beach';
   if (area === 'world' && x > STRAIT.from && x < STRAIT.to) x = S.sandalSide === 'island' ? STRAIT.to : STRAIT.from;
   G.sandal.syncSide();
-  G.setArea(area, x, floor ?? 0);
+  if (area === 'fener_ic') {
+    // eski kayıtlar ya da geçersiz konum: yatağın yanında başla
+    const fi = G.areas.fener_ic;
+    if (z === undefined || floor === undefined || !(floor in { '-1': 1, 0: 1, 1: 1, 2: 1, 3: 1 }) || fi.blocked(floor, x, z)) { const w = fi.wakeSpot(); x = w.x; z = w.z; floor = 0; }
+  }
+  G.setArea(area, x, floor ?? 0, z ?? 0);
   if (G.hour >= 22 && S.nightEvent) G.night.begin();
 }
 
@@ -253,6 +274,19 @@ function updateCamera(dt) {
     return;
   }
   const P = G.player, a = G.area;
+  if (a.topdown) {
+    // Stardew tarzı kuş bakışı: oda ortası ile oyuncu arasına odaklan
+    const cx = a.center(P.floor), small = a.radius(P.floor) < 5;
+    const tx = cx + (P.x - cx) * 0.55, tz = P.z * 0.55;
+    const hgt = small ? 11 : 12.5, back = small ? 7.4 : 8.4;
+    if (G.camSnap) { cam.x = tx; cam.y = tz; G.camSnap = false; }
+    cam.x = damp(cam.x, tx, 4, dt); cam.y = damp(cam.y, tz, 4, dt);
+    let sx = 0, sy = 0;
+    if (G.camShake > 0) { sx = (Math.random() - 0.5) * G.camShake * 0.4; sy = (Math.random() - 0.5) * G.camShake * 0.4; G.camShake = Math.max(0, G.camShake - dt * 1.2); }
+    camera.position.set(cam.x + sx, hgt + sy, cam.y + back);
+    camera.lookAt(cam.x + sx * 0.5, 0, cam.y - 0.4);
+    return;
+  }
   const c = a.cam;
   let dist = c.dist, h = c.height;
   let look = c.look;
@@ -312,7 +346,8 @@ function frame(now) {
     else if (G.mode === 'drive') G.ui.prompt(G.sandal.canLeave() ? { force: true, label: '⚓ İskeleye in', x: G.sandal.x, wy: G.sandal.y + 2.7 } : null);
     else G.ui.prompt(null);
     questT -= dt; if (questT <= 0) { questT = 0.5; Quests.check(); }
-    saveT -= dt; if (saveT <= 0) { saveT = 30; if (G.mode !== 'drive') G.state.player.x = G.player.x; }
+    saveT -= dt; if (saveT <= 0) { saveT = 30; if (G.mode !== 'drive') { G.state.player.x = G.player.x; G.state.player.z = G.player.z; } }
+    G.decor.update(dt);
   } else if (G.mode === 'title') G.sandal.update(dt, G.t);
   if (G.mode !== 'paused') {
     for (const npc of G.npcs) npc.update(dt, G.hour, G.t);
@@ -321,7 +356,7 @@ function frame(now) {
 
   // ışık odağı
   if (G.mode === 'title' || G.mode === 'beam') focus.set(LIGHTHOUSE_X - 10, 4, -4);
-  else focus.set(G.player.x, G.player.y, 0);
+  else focus.set(G.player.x, G.player.y, G.player.z ?? 0);
 
   updateCamera(dt);
   G.world.update(dt, G.t, G.env.night, G.weather);
@@ -355,7 +390,7 @@ function frame(now) {
   grade.uniforms.time.value = G.t;
   grade.uniforms.night.value = G.area.id === 'magara' ? 0.6 : G.env.night;
   grade.uniforms.flash.value = G.weather.flash * 0.25;
-  bloom.strength = 0.45 + G.env.night * 0.35;
+  bloom.strength = (0.45 + G.env.night * 0.35) * (G.area.topdown ? 0.55 : 1);
   // pencere küçültülmüş/gizliyse (sıfır boyut) çizme
   if (innerWidth > 0 && innerHeight > 0) composer.render();
   Input.endFrame();

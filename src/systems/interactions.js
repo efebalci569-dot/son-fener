@@ -1,7 +1,7 @@
 // Etkileşim noktaları ve [E] tuşu
 import { G, canAct } from '../game.js';
 import { Input } from '../core/input.js';
-import { FENER_X, FLOOR_Y, CAVE_X, SEA_X, caveGround } from '../world/interiors.js';
+import { CAVE_X, SEA_X, caveGround } from '../world/interiors.js';
 import { LIGHTHOUSE_X } from '../world/world.js';
 import { SANDAL_DOCK } from '../world/terrain.js';
 import { startDive } from './fishing.js';
@@ -28,7 +28,9 @@ export function buildInteractions() {
     x: LIGHTHOUSE_X, label: () => G.inv.has('fener_anahtari') ? '🚪 Fenere gir' : '🚪 Fener (kilitli)',
     action: () => {
       if (!G.inv.has('fener_anahtari')) { G.ui.toast('Kapı kilitli. Anahtar belediyede olmalı.', 'warn'); return; }
-      G.setArea('fener_ic', FENER_X - 3.6, 0);
+      const e = G.areas.fener_ic.entrance();
+      G.setArea('fener_ic', e.x, 0, e.z);
+      G.player.rig.faceYaw = Math.PI / 2;
       S().flags.enteredLighthouse = true;
       G.quests.check();
     },
@@ -107,58 +109,6 @@ export function buildInteractions() {
   add({ x: 113.2, enabled: () => S().nightEvent === 'ayak_izleri' && G.night.prints.visible && !S().clues.includes('c05'), label: '👣 Islak ayak izleri', action: () => G.night.inspectPrints() });
   add({ x: 110.8, label: '🤿 Sığ resif (dalış)', enabled: () => G.inv.has('dalis'), action: () => { G.ui.toast('Dalıyorsun...', 'info'); startDive('sahil'); } });
 
-  // ---------------- FENER İÇİ ----------------
-  const F = (floor, x, o) => add({ area: 'fener_ic', floor, x: FENER_X + x, range: 0.8, ...o });
-  F(0, -4.6, {
-    label: () => G.night.knock?.state === 'knocking' ? '🚪 Kapıyı aç' : '🚪 Dışarı çık',
-    action: () => { if (G.night.doorEvent()) return; G.setArea('world', LIGHTHOUSE_X - 0.6); },
-  });
-  F(0, -3.0, { label: '📋 Geliştirme panosu', action: () => G.ui.openUpgrade() });
-  F(0, -1.7, { enabled: () => S().hasChest, label: '📦 Sandık', action: () => G.ui.openChest() });
-  F(0, -0.2, { enabled: () => S().lighthouse.level >= 2, label: '🔨 Çalışma masası', action: () => G.ui.openCraft('fener') });
-  F(0, 1.5, { label: () => G.hour >= 18 ? '🛏️ Uyu' : '🛏️ Yatak (uyu)', action: () => G.day.sleep() });
-  for (let f = 0; f < 3; f++) F(f, 4.0, { label: '⬆️ Yukarı çık', action: () => G.changeFloor(f + 1) });
-  for (let f = 1; f < 4; f++) F(f, -4.0, { label: '⬇️ Aşağı in', action: () => G.changeFloor(f - 1) });
-  F(1, -2.2, {
-    label: () => S().lighthouse.level >= 3 ? (S().clues.includes('c02') ? '🚪 Gizli oda (boş)' : '🚪 Gizli oda') : '🔒 Kilitli kapı',
-    action: () => {
-      if (S().lighthouse.level < 3) { G.ui.toast('Paslı, ağır bir kilit. Bu katı onarınca (Fener Seviye 3) açabilirsin.', 'info'); return; }
-      if (S().clues.includes('c02')) { G.ui.toast('Gizli oda boş. Yalnızca tuz ve küf kokusu.', 'info'); return; }
-      G.ui.dialog({ speaker: null, lines: ['Kapı gıcırdayarak açılıyor. İçerisi küçük, penceresiz bir oda.', 'Bir sandığın içinde, yağlı bezlere sarılmış ıslak bir seyir defteri buluyorsun.', 'Kapağında soluk harflerle: AURELIA — 1927.', 'Sayfalar hâlâ ıslak. Seksen yıldır.'], onEnd: () => G.mystery.addClue('c02') });
-    },
-  });
-  F(1, 0.6, { enabled: () => S().lighthouse.level >= 3, label: '🔨 Atölye tezgâhı', action: () => G.ui.openCraft('fener3') });
-  F(1, 2.0, { enabled: () => S().lighthouse.level >= 3, label: '🗺️ Harita masası', action: () => G.ui.openNotebook('harita') });
-  F(2, -1.5, {
-    enabled: () => S().lighthouse.level >= 4, label: '📻 Radyo',
-    action: () => {
-      G.audio.radio();
-      const h = G.hour;
-      if (h >= 22 && !S().clues.includes('c12')) {
-        G.ui.dialog({ speaker: null, lines: ['Parazitin içinden bir ses...', '"...Aurelia\'dan karaya... konum 48 kuzey... ada... ışığı görüyoruz... bizi bekleyin..."', 'Ardından şarkı söyleyen sesler. Sonra sessizlik.'], onEnd: () => G.mystery.addClue('c12') });
-      } else if (h >= 22) G.ui.toast('Parazit... ve çok uzaktan, bir şarkının kırıntıları.', 'mystery');
-      else G.ui.toast('Yalnızca parazit. Belki gece bir şey duyulabilir.', 'info');
-    },
-  });
-  F(2, 0.8, {
-    enabled: () => S().lighthouse.level >= 4, label: '🔭 Teleskop',
-    action: () => {
-      const s = S();
-      const w = WEATHER[s.tomorrowWeather];
-      const lines = [`Yarın için gökyüzü: ${w.icon} ${w.name}.`];
-      if (G.hour >= 18 && s.nightEvent) {
-        const hint = { normal: 'Deniz bu gece sakin görünüyor.', sis: 'Ufukta kalın bir sis duvarı birikiyor.', sesler: 'Sahil boş. Ama rüzgârın sesi... kelimeye benziyor.', ayak_izleri: 'Islak kumda bir şeyler kımıldıyor gibi.', siluet: 'Su kenarında biri mi duruyor? Göz kırpınca yok.', uzak_isik: 'Ufukta, çok uzakta soluk bir ışık yanıp sönüyor.', hayalet_gemi: 'Ufukta yelken gibi bir şey... sonra hiçbir şey.', npc_kayip: 'Kasabanın bir penceresinde ışık hiç yanmadı.', fener_ariza: 'Lamba mekanizmasından tuhaf bir tıkırtı geliyor.', yaratik: 'Denizin yüzeyi bir yerde fazla düz. Sanki altında bir şey var.', ozel: 'Bu gece bir şey farklı. Tarif edemiyorsun.' }[s.nightEvent];
-        lines.push('Bu gece: ' + hint);
-      } else lines.push('Gece olunca denizi gözlemek daha anlamlı olabilir.');
-      G.ui.dialog({ speaker: null, lines });
-    },
-  });
-  F(2, 2.6, { enabled: () => S().lighthouse.level >= 4, label: '📚 Eski deniz kayıtları', action: () => G.ui.dialog({ speaker: null, lines: ['1889: Fener inşa edildi. Mimarın notu: "Işık denize doğru değil, denizin üzerine — bir çit gibi."', '1927: Bekçi kaydı boş. 14-17 Kasım sayfaları yırtılmış.', '1947, 1967, 1987: Her biri Kasım. Her birinde aynı not: "Işık söndü."', 'Son sayfada Aron Lind\'in el yazısı: "Kapıyı ben açacağım. Jonas\'ı geri getireceğim."'] }) });
-  F(2, 0, { enabled: () => S().lighthouse.level < 4, range: 1.2, label: '📦 Tozlu oda', action: () => G.ui.toast('Tozlu sandıklar ve kırık bir teleskop. Gözlem odası için Fener Seviye 4 gerekli.', 'info') });
-  F(3, -3.2, { enabled: () => !S().clues.includes('c01'), label: '📄 Eski not', action: () => G.ui.dialog({ speaker: null, lines: ['Masada sararmış bir kâğıt. Eski bekçinin el yazısı:', '"Son gece denizde bir ışık gördüm. Bizim ışığımıza cevap veriyordu. Üç kısa, bir uzun. Tıpkı 1927 kayıtlarındaki gibi."', '"Jonas onu görmeye gitti. Ben de gidiyorum. — A."'], onEnd: () => { G.mystery.addClue('c01'); G.areas.fener_ic.refresh(S()); } }) });
-  F(3, 0.3, { range: 1.1, label: () => S().flags.lampRepaired ? '🔆 Fener lambası' : '🔧 Lambayı onar', action: () => lampMenu() });
-  F(3, 3.4, { label: '📖 Fener defteri', action: () => { const s = S(); G.ui.dialog({ speaker: null, lines: [`Yanan geceler: ${s.stats.nightsLit ?? 0} · Üst üste: ${s.stats.litStreak ?? 0}`, `Hazne: ${s.lighthouse.fuel.toFixed(1)} / ${G.lamp.capacity().toFixed(1)} saat · Fener Seviye ${s.lighthouse.level}`, 'Eski bekçinin son kaydı: "Işık bir kapıdır. Kapalı tutun."'] }); } });
-
   // ---------------- MAĞARA ----------------
   add({ area: 'magara', x: CAVE_X + 1.2, label: '🌤️ Mağaradan çık', action: () => G.setArea('world', -117.4) });
   fishSpot(CAVE_X + 40.5, 'magara', { area: 'magara', minDist: 3, maxDist: 6.5, water: () => caveGround(CAVE_X + 40) - 0.55 });
@@ -197,7 +147,7 @@ function boatMenu(atSea = false) {
   G.ui.dialog({ speaker: null, lines: [atSea ? 'Nereye?' : `Tekne Seviye ${b}. Nereye açılmak istersin?`], options: opts });
 }
 
-function lampMenu() {
+export function lampMenu() {
   const S = G.state, L = S.lighthouse, lamp = G.lamp;
   if (!S.flags.lampRepaired) {
     const cost = { hurda: 4, deniz_cami: 3, odun: 2 };
@@ -235,12 +185,15 @@ function lampMenu() {
 export function updateInteractions() {
   const P = G.player, area = G.area.id;
   let best = null, bd = 1e9;
+  const topdown = G.area.topdown;
   if (canAct()) {
-    for (const it of G.interactables) {
+    const list = topdown ? [...G.interactables, ...G.decor.interactables(P.floor)] : G.interactables;
+    for (const it of list) {
       if (it.area !== area) continue;
       if (it.floor !== undefined && it.floor !== P.floor) continue;
       if (it.enabled && !it.enabled()) continue;
-      const d = Math.abs(it.x - P.x);
+      // kuş bakışında iki boyutlu mesafe
+      const d = topdown ? Math.hypot(it.x - P.x, (it.z ?? 0) - P.z) : Math.abs(it.x - P.x);
       if (d <= it.range && d < bd) { bd = d; best = it; }
     }
     if (area === 'world') {
@@ -267,4 +220,4 @@ export function updateInteractions() {
   }
 }
 
-export { FLOOR_Y, NIGHT_EVENTS };
+export { NIGHT_EVENTS };

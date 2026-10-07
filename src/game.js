@@ -16,4 +16,4 @@ export const G = {
 
 // Bu karede başka bir arayüz kapanmışsa (aynı tuş) oyuncu eylemi tetiklenmesin
 export function canAct() { return G.mode === 'play' && G.frameMode === 'play'; }
-export function timeRuns() { return G.mode === 'play' || G.mode === 'fishing' || G.mode === 'beam' || G.mode === 'dive' || G.mode === 'drive'; }
+export function timeRuns() { return G.mode === 'play' || G.mode === 'fishing' || G.mode === 'beam' || G.mode === 'dive' || G.mode === 'drive' || G.mode === 'place'; }

@@ -17,7 +17,9 @@ export const Craft = {
   iconOf(it) { return typeof it === 'object' ? '🐟' : itemIcon(it); },
   visible(station) {
     const c = this.ctx();
-    return RECIPES.filter(r => r.unlock(c) && !(r.once && G.inv.has(r.out)) && (station !== 'atolye' || !['r_solucan', 'r_parlak'].includes(r.id)));
+    return RECIPES.filter(r => r.unlock(c) && !(r.once && G.inv.has(r.out))
+      && (station === 'soba' ? r.station === 'soba' : r.station !== 'soba')
+      && (station !== 'atolye' || !['r_solucan', 'r_parlak'].includes(r.id)));
   },
   can(r) {
     return this.needFor(r).every(([it, n]) => this.haveOf(it) >= n) && G.inv.canAdd(r.out);

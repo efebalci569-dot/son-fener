@@ -4,7 +4,7 @@ export const CLUES = {
   c02: { title: 'Aurelia\'nın Seyir Defteri (1927)', source: 'Fenerin gizli odası', text: 'Islak sayfalarda son kayıt: "17 Kasım 1927. Üç gündür sisin içindeyiz. Fener görünmüyor. Mürettebat suda şarkı söyleyen sesler duyduğunu söylüyor." Gemi 14 Kasım\'da battı diye kaydedilmişti.' },
   c03: { title: 'Fotoğraftaki Yabancı', source: 'Belediye (Hale)', text: '1950 tarihli liman açılışı fotoğrafı. İskelenin ucunda bekçi paltolu bir adam duruyor. O yıl fenerin bekçisi yoktu.' },
   c04: { title: 'Jonas\'ın Kayboluşu', source: 'Elias', text: 'Elias\'ın kardeşi Jonas, 1987\'de sisli bir gecede denizdeki bir ışığa doğru açıldı. Aynı gece fenerin bekçisi de kayboldu.' },
-  c05: { title: 'Denizden Gelen İzler', source: 'Sahil, gece', text: 'Islak çıplak ayak izleri. Denize giden değil, denizden gelen. Fenerin kapısına kadar uzanıp kayboluyorlar.' },
+  c05: { title: 'Denizden Gelen İzler', source: 'Sahil, gece', text: 'Islak çıplak ayak izleri. Denize giden değil, denizden gelen. Fener sandalının iskelesine kadar uzanıp kayboluyorlar.' },
   c06: { title: 'Resmi Kaza Raporu', source: 'Belediye arşivi (Hale)', text: '"Aurelia fırtınada battı. Enkaz bulunamadı." İmza: Liman Müdürü Viktor Brandt. O gece meteoroloji kaydında fırtına yok.' },
   c07: { title: '1931 Tarihli Mektup', source: 'Marta', text: 'Aurelia mürettebatından birinin yazdığı mektup — gemi "battıktan" dört yıl sonra: "Bizi bekleyin. Işığı yakın. Işığı gören eve döner."' },
   c08: { title: 'Kilise Anma Tahtası', source: 'Eski kilise', text: 'Denizde kaybolanlar: 1927 — Aurelia mürettebatı (31). 1947 — Balıkçı Tom Erling. 1967 — Kaptan Rudi Hale. 1987 — Jonas Varga ve Bekçi Aron Lind. Hepsi Kasım ayında.' },

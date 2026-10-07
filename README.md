@@ -32,13 +32,16 @@ Ardından `http://localhost:5173` adresini aç. Kalıcı bir sürüm için `npm 
 
 **Balık tutma:** Boşluğu basılı tutup bırakarak oltayı at. Şamandıra batınca Boşluk ile kancala. Ardından Boşluğu basılı tutup makarayı sar; balık çekerken (kırmızı uyarı) bırakıp misinayı gevşet. Gerilim taşarsa misina kopar.
 
+**Sandal:** Fener ayrı bir adada. Sahilin sonundaki iskelede `E` ile sandala bin, A/D ile gaz ver (Shift: tam yol), karşı iskeleye yanaşınca `E` ile in.
+
 **Fener:** Akşam (17:00 sonrası) lamba odasına çık, yağ ekle ve feneri yak. "Feneri yönet" seçeneğiyle ışığı A/D ile kendin çevirebilirsin. Bazı geceler ışık denizde bir şeyler gösterir.
 
 Geliştirici kısayolları: `F9` saati 1 saat ileri alır, `F8` zamanı 8 kat hızlandırır.
 
 ## Bu sürümde olanlar
 
-- **2.5D dünya:** Eski Tersane → Orman (mağara) → Kasaba → Balıkçı İskelesi → Sahil → Deniz Feneri. Katmanlı derinlik, parallax, sinematik kamera bölgeleri (fenerde geri çekilir, gece denize yakınken yakınlaşır, diyalogda odaklanır).
+- **2.5D dünya:** Eski Tersane → Orman (mağara) → Kasaba → Balıkçı İskelesi → Sahil → Fener Boğazı (sandalla) → Fener Adası.
+- **Ayarlar:** Grafik (kalite hazır ayarları, çözünürlük, gölgeler, ışıma, gren, kamera sarsıntısı, FPS), ses (ana ses, müzik, efekt, ortam) ve oyun (gün uzunluğu). Başlık ekranından ve Esc menüsünden açılır. Katmanlı derinlik, parallax, sinematik kamera bölgeleri (fenerde geri çekilir, gece denize yakınken yakınlaşır, diyalogda odaklanır).
 - **Gündüz/gece döngüsü:** 06:00–02:00, dinamik ışık, gökyüzü, yıldızlar, ay ve sokak lambaları. 02:00'de bayılma ve sabah raporu.
 - **Hava sistemi:** Açık, bulutlu, yağmurlu, sisli ve fırtınalı (şimşek) hava. Balıkları ve NPC programlarını etkiler.
 - **Deniz feneri:** Kırık lambayı onarma, yağ ekonomisi, dönen hacimli ışık hüzmesi, elle yönetme modu, 5 seviyeli geliştirme (yatak, sandık, atölye, gizli oda, gözlem odası, radyo, teleskop) ve kesit görünümlü 4 katlı iç mekân.

@@ -4,6 +4,7 @@ import { saveGame } from '../core/state.js';
 import { weightedPick, WEEKDAYS, chance } from '../core/utils.js';
 import { WEATHER } from '../world/weather.js';
 import { respawnNodes } from '../entities/nodes.js';
+import { Settings } from '../core/settings.js';
 
 export const SEC_PER_MIN = 0.6; // gerçek saniye / oyun dakikası
 export const DAY_END = 20 * 60; // 02:00
@@ -35,7 +36,7 @@ export const Day = {
   update(dt) {
     if (!timeRuns()) return;
     const S = G.state;
-    this.acc += dt * G.timeScale / SEC_PER_MIN;
+    this.acc += dt * G.timeScale / Settings.secPerMin();
     if (this.acc >= 1) {
       const m = Math.floor(this.acc);
       this.acc -= m;
@@ -74,6 +75,9 @@ export const Day = {
     const S = G.state;
     G.mode = 'cutscene';
     if (G.fishing.state !== 'idle') G.fishing.stop();
+    G.sandal.stopDriving();
+    S.sandalSide = 'island'; // fenerde uyanırsın; sandal adadaki iskelede bekler
+    G.sandal.syncSide();
     G.ui.closeAll();
     const report = [];
     // fener ödemesi

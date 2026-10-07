@@ -1,12 +1,12 @@
 // Dış dünyanın yerleşimi: kasaba, iskele, sahil, fener, orman, tersane ve arka planlar
 import * as THREE from 'three';
 import * as M from './models.js';
-import { buildTerrain, terrainHeight, groundY } from './terrain.js';
+import { buildTerrain, terrainHeight, groundY, PIER_A, PIER_B } from './terrain.js';
 import { waveHeight } from './sea.js';
 import { mulberry32, randRange } from '../core/utils.js';
 import { mergeStatic } from './merge.js';
 
-export const LIGHTHOUSE_X = 150, LIGHTHOUSE_Z = -4.4;
+export const LIGHTHOUSE_X = 180, LIGHTHOUSE_Z = -4.4;
 
 export function buildWorld(G) {
   const scene = G.scene;
@@ -68,10 +68,11 @@ export function buildWorld(G) {
   post.add(M.box(0.12, 2.2, 0.12, '#3a3a3a', -1.1, 1.1, 0)); post.add(M.box(0.12, 2.2, 0.12, '#3a3a3a', 1.1, 1.1, 0));
   place(post, -62.5, -2.8, 0.1);
   // sokak lambaları
-  for (const x of [-61, -52.5, -42.6, -26.5, -16.4, -6.8, 6.2, 14, 26, 38, 128.5, 143]) {
+  for (const x of [-61, -52.5, -42.6, -26.5, -16.4, -6.8, 6.2, 14, 26, 38, 121.6, 154.6, 170]) {
     const { group, bulb } = M.makeLampPost();
-    const z = x > 8 && x < 43 ? -1.75 : -2.6;
-    const y0 = x > 8 && x < 43 ? 0.62 : terrainHeight(x, z);
+    const onPier = (x > 8 && x < 43) || (x > PIER_A.from && x < PIER_A.to) || (x > PIER_B.from && x < PIER_B.to);
+    const z = onPier ? -1.75 : -2.6;
+    const y0 = onPier ? 0.62 : terrainHeight(x, z);
     group.position.set(x, y0, z); root.add(group);
     G.env.addLight({ area: 'world', pos: new THREE.Vector3(x + bulb.x, y0 + bulb.y - 0.1, z), color: '#ffc070', distance: 13, on: 'night', intensity: 14 });
   }
@@ -92,6 +93,22 @@ export function buildWorld(G) {
   for (let x = 10; x <= 42; x += 3.2) for (const z of [-1.55, 1.55]) dock.add(M.cyl(0.14, 0.16, 3.6, '#4a3a2a', 6, x, -1.2, z));
   for (const x of [12, 22, 32, 41.6]) dock.add(M.cyl(0.18, 0.22, 0.6, '#2a2a2e', 8, x, 0.9, -1.45));
   root.add(dock);
+  // sandal iskeleleri: sahilden boğaza ve adaya
+  const pier = (from, to) => {
+    const g = new THREE.Group();
+    for (let x = from; x < to - 0.05; x += 1.3) g.add(M.box(1.26, 0.18, 2.4, (Math.round(x * 10) % 3 === 0) ? '#7a5e42' : '#86684a', Math.min(x + 0.65, to - 0.65), 0.53, 0));
+    for (let x = from + 0.3; x <= to; x += 2.6) for (const z of [-1.1, 1.1]) g.add(M.cyl(0.12, 0.14, 3.6, '#4a3a2a', 6, x, -1.2, z));
+    // korkuluk yalnızca arka tarafta (oyuncuyu kapatmasın)
+    g.add(M.box(to - from, 0.07, 0.07, '#5a4430', (from + to) / 2, 1.25, -1.1));
+    for (let x = from + 0.3; x <= to; x += 1.3) g.add(M.box(0.08, 0.66, 0.08, '#5a4430', x, 0.95, -1.1));
+    for (const x of [from + 0.2, to - 0.2]) g.add(M.cyl(0.13, 0.16, 0.5, '#2a2a2e', 8, x, 0.85, 1.0)); // baba
+    root.add(g);
+  };
+  pier(PIER_A.from, PIER_A.to);
+  pier(PIER_B.from, PIER_B.to);
+  const sign = M.makeSign('FENER ADASI', 2.2, 0.5, { bg: '#2a3a4a', font: 'bold 52px Georgia' });
+  const sp = new THREE.Group(); sp.add(sign); sign.position.y = 1.7; sp.add(M.box(0.1, 1.7, 0.1, '#3a3a3a', 0, 0.85, 0));
+  place(sp, 114.2, -2.4, 0.15);
   // bağlı tekneler
   const boatCols = ['#b84a3a', '#3a6a8a', '#e0c050'];
   [[15.5, -5.2], [23.5, -5.6], [31, -5.0]].forEach(([x, z], i) => {
@@ -113,11 +130,11 @@ export function buildWorld(G) {
 
   // ---------- SAHİL ----------
   for (let i = 0; i < 26; i++) {
-    const x = R(46, 122), z = R(-9, -3.5);
+    const x = R(46, 114), z = R(-9, -3.5);
     place(M.makeRock(R(0.4, 1.4), rnd() > 0.5 ? '#6a6a6e' : '#7a766e', i), x, z, R(0, 6), -0.2);
   }
-  for (let i = 0; i < 12; i++) place(M.makeRock(R(0.3, 0.7), '#8a8478', i + 40), R(46, 122), R(3, 7), R(0, 6), -0.1);
-  for (let i = 0; i < 16; i++) place(M.makeGrassTuft('#8a9a5a'), R(46, 120), R(4, 8));
+  for (let i = 0; i < 12; i++) place(M.makeRock(R(0.3, 0.7), '#8a8478', i + 40), R(46, 114), R(3, 7), R(0, 6), -0.1);
+  for (let i = 0; i < 16; i++) place(M.makeGrassTuft('#8a9a5a'), R(46, 113), R(4, 8));
   const beached = M.makeHullSkeleton(); beached.scale.setScalar(0.6); place(beached, 87, -7.5, 0.4, -0.6); beached.rotation.z = 0.15;
   // Selin'in kulübesi
   const hut = M.makeHut(); place(hut.group, 96, -7.2, 0.05);
@@ -134,12 +151,12 @@ export function buildWorld(G) {
   root.add(lh.group);
   W.lighthouse = { ...lh, worldLamp: new THREE.Vector3(LIGHTHOUSE_X, ly + lh.lampY, LIGHTHOUSE_Z), baseY: ly };
   G.env.addLight({ area: 'world', pos: new THREE.Vector3(LIGHTHOUSE_X, ly + 4.1, LIGHTHOUSE_Z + 2.8), color: '#ffc070', distance: 9, on: 'night', intensity: 10 });
-  for (let i = 0; i < 16; i++) place(M.makeRock(R(0.6, 2.2), rnd() > 0.5 ? '#6a6c70' : '#5a5c60', i + 70), R(124, 172), R(-12, -6.5), R(0, 6), -0.4);
-  for (let i = 0; i < 6; i++) place(M.makeRock(R(0.5, 1.1), '#6e7074', i + 90), R(126, 170), R(3.5, 7), R(0, 6), -0.2);
-  place(M.makeFence(8, '#e8e0d0'), 162, -5.6);
-  place(M.makeFence(6, '#e8e0d0'), 138, -5.6);
-  place(M.makeBench(), 157, -2.6, 0);
-  for (let i = 0; i < 12; i++) place(M.makeGrassTuft('#6a8a4a'), R(132, 170), R(-5, 6));
+  for (let i = 0; i < 16; i++) place(M.makeRock(R(0.6, 2.2), rnd() > 0.5 ? '#6a6c70' : '#5a5c60', i + 70), R(157, 203), R(-12, -6.5), R(0, 6), -0.4);
+  for (let i = 0; i < 6; i++) place(M.makeRock(R(0.5, 1.1), '#6e7074', i + 90), R(158, 200), R(3.2, 5.5), R(0, 6), -0.2);
+  place(M.makeFence(8, '#e8e0d0'), 192, -5.6);
+  place(M.makeFence(6, '#e8e0d0'), 168, -5.6);
+  place(M.makeBench(), 187, -2.6, 0);
+  for (let i = 0; i < 12; i++) place(M.makeGrassTuft('#6a8a4a'), R(162, 200), R(-5, 3));
   // uzak kayalık ada & ufuk adası
   const islandMat = M.mat('#3a4a48');
   const farIsland = new THREE.Group();

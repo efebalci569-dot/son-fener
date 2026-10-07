@@ -284,6 +284,7 @@ export function buildSeaArea(G) {
   const g = new THREE.Group();
   G.scene.add(g);
   const boat = M.makeBoat({ L: 7, W: 2.6, color: '#2a4a5a', cabin: true });
+  boat.position.set(X, 0, 0); // dünyanın başlangıç noktasında (atölyenin önünde) kalmasın
   g.add(boat);
   // batık
   const wreck = new THREE.Group();

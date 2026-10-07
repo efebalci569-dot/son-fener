@@ -16,6 +16,7 @@ export function newState() {
     bait: null,
     lighthouse: { level: 1, lit: false, broken: false, fuel: 0, nightLit: 0, yaw: 0 },
     boat: { level: 0 },
+    sandalSide: 'beach',
     skills: { balikcilik: 0, kesif: 0, crafting: 0, dalis: 0, fener: 0 },
     npcs,
     clues: [],

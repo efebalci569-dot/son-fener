@@ -106,9 +106,9 @@ export function buildNodes() {
   const small = (t, i, r) => (i % 2 ? 1 : -1) * (0.9 + r() * 0.6);
   const back = () => -2.9;
   const list = [
-    ...scatter(rnd, 'sahil', 'world', 46, 120, 20, [['driftwood', 3], ['shells', 3], ['seaglass', 2.5], ['pebbles', 1.5], ['scrap', 3], ['wreckage', 1]], small),
+    ...scatter(rnd, 'sahil', 'world', 46, 112, 20, [['driftwood', 3], ['shells', 3], ['seaglass', 2.5], ['pebbles', 1.5], ['scrap', 3], ['wreckage', 1]], small),
     ['kasaba_0', 'scrap', 'world', 6.8, 1.2], ['kasaba_1', 'pebbles', 'world', -64, 1.4],
-    ['fener_0', 'seaglass', 'world', 131, 1.2], ['fener_1', 'scrap', 'world', 138, -1.3], ['fener_2', 'boulder', 'world', 166, -2.6], ['fener_3', 'shells', 'world', 160, 1.4],
+    ['fener_0', 'seaglass', 'world', 158.5, 1.2], ['fener_1', 'scrap', 'world', 168, -1.3], ['fener_2', 'boulder', 'world', 196, -2.6], ['fener_3', 'shells', 'world', 190, 1.4],
     ...scatter(rnd, 'orman', 'world', -136, -72, 26, [['tree', 3], ['pine', 2], ['mushroom', 2], ['herb', 2], ['berry', 1.5], ['boulder', 0.8], ['driftwood', 0.6]], (t, i, r) => (t === 'tree' || t === 'pine' || t === 'boulder') ? back() : small(t, i, r)),
     ...scatter(rnd, 'tersane', 'world', -200, -142, 16, [['scrapheap', 4], ['boulder', 1.5], ['wreckage', 1.2], ['scrap', 2], ['iron', 0.6]], (t, i, r) => (t === 'boulder' || t === 'iron') ? back() : small(t, i, r)),
     ['tersane_chest', 'oldchest', 'world', -176, -2.6],
@@ -116,7 +116,7 @@ export function buildNodes() {
     ['magara_chest', 'oldchest', 'magara', CAVE_X + 58, -2.4],
     // gizli noktalar
     ['gizli_0', 'hidden', 'world', 101.5, 0.9], ['gizli_1', 'hidden', 'world', 57.3, -1.2], ['gizli_2', 'hidden', 'world', -101, 1.1],
-    ['gizli_3', 'hidden', 'world', -189, -1.0], ['gizli_4', 'hidden', 'world', 163.5, 1.0], ['gizli_5', 'hidden', 'magara', CAVE_X + 30, 1.0], ['gizli_6', 'hidden', 'world', -47, 1.6],
+    ['gizli_3', 'hidden', 'world', -189, -1.0], ['gizli_4', 'hidden', 'world', 193.5, 1.0], ['gizli_5', 'hidden', 'magara', CAVE_X + 30, 1.0], ['gizli_6', 'hidden', 'world', -47, 1.6],
   ];
   // mağara: içerideki orman ağaçlarını dışarıda tut; aynı x'e çok yakın olanları ayır
   return list.map(([id, type, area, x, z]) => new Node(id, type, area, x, z));

@@ -10,6 +10,39 @@ class AudioEngine {
     this.droneOn = false;
     this.target = { waves: 0.5, wind: 0.2, rain: 0, indoor: 0, night: 0, cave: 0 };
     this.t = 0;
+    this.vol = { master: 80, music: 60, sfx: 80, ambient: 80 };
+  }
+
+  // 0–100 arası ses düzeyleri
+  setVolumes(v) {
+    Object.assign(this.vol, v);
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime, k = x => Math.pow(x / 100, 1.6);
+    this.master.gain.setTargetAtTime(k(this.vol.master), now, 0.05);
+    this.sfx.gain.setTargetAtTime(k(this.vol.sfx) * 1.25, now, 0.05);
+    this.musicBus.gain.setTargetAtTime(k(this.vol.music) * 0.37, now, 0.05);
+    this.ambBus.gain.setTargetAtTime(k(this.vol.ambient) * 1.25, now, 0.05);
+  }
+
+  // Sandal motoru (sürekli ses, hıza göre)
+  engine(speed, on) {
+    if (!this.enabled) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    if (!this.eng) {
+      const g = ctx.createGain(); g.gain.value = 0;
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 380;
+      const o1 = ctx.createOscillator(); o1.type = 'sawtooth'; o1.frequency.value = 42;
+      const o2 = ctx.createOscillator(); o2.type = 'square'; o2.frequency.value = 21;
+      const o2g = ctx.createGain(); o2g.gain.value = 0.35;
+      o1.connect(f); o2.connect(o2g).connect(f); f.connect(g).connect(this.sfx);
+      o1.start(); o2.start();
+      this.eng = { g, f, o1, o2 };
+    }
+    const s = Math.min(1, Math.abs(speed) / 7);
+    this.eng.g.gain.setTargetAtTime(on ? 0.05 + s * 0.09 : 0, now, 0.15);
+    this.eng.o1.frequency.setTargetAtTime(38 + s * 34, now, 0.2);
+    this.eng.o2.frequency.setTargetAtTime(19 + s * 17, now, 0.2);
+    this.eng.f.frequency.setTargetAtTime(300 + s * 500, now, 0.2);
   }
 
   init() {
@@ -23,6 +56,7 @@ class AudioEngine {
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -18; comp.ratio.value = 3;
     this.master.connect(comp).connect(ctx.destination);
+    this.sfx = ctx.createGain(); this.sfx.connect(this.master);
 
     // Gürültü tamponları
     this.white = this._noiseBuffer('white');
@@ -60,6 +94,7 @@ class AudioEngine {
     const dl = ctx.createBiquadFilter(); dl.type = 'lowpass'; dl.frequency.value = 300;
     d1.connect(dl); d2.connect(dl); dl.connect(this.drone).connect(this.musicBus);
     d1.start(); d2.start();
+    this.setVolumes({});
   }
 
   _noiseBuffer(type) {
@@ -141,7 +176,7 @@ class AudioEngine {
     g.gain.exponentialRampToValueAtTime(gain, t0 + attack);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + attack + decay);
     const p = ctx.createStereoPanner(); p.pan.value = pan;
-    o.connect(g).connect(p).connect(bus ?? this.master);
+    o.connect(g).connect(p).connect(bus ?? this.sfx);
     o.start(t0); o.stop(t0 + attack + decay + 0.05);
     return g;
   }
@@ -157,7 +192,7 @@ class AudioEngine {
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + attack + decay);
     const p = ctx.createStereoPanner(); p.pan.value = pan;
     src.connect(f).connect(g).connect(p);
-    p.connect(this.master);
+    p.connect(this.sfx);
     if (reverb) { const rg = ctx.createGain(); rg.gain.value = reverb; p.connect(rg).connect(this.reverb); }
     src.start(t0, Math.random() * 2); src.stop(t0 + attack + decay + 0.1);
     return { f, g };
@@ -215,7 +250,7 @@ class AudioEngine {
     }
     f.connect(g).connect(p);
     p.connect(this.reverb);
-    const dry = ctx.createGain(); dry.gain.value = 0.25; p.connect(dry).connect(this.master);
+    const dry = ctx.createGain(); dry.gain.value = 0.25; p.connect(dry).connect(this.sfx);
   }
 
   bell() {

@@ -28,7 +28,7 @@ export const LOCATIONS = {
 export const NPCS = [
   {
     id: 'elias', name: 'Elias', title: 'Balıkçı',
-    look: { coat: '#3d5a3a', pants: '#3a3530', skin: '#d8a989', hair: '#9a9590', hat: 'cap', hatColor: '#b9a37a', beard: '#b5b0aa' },
+    look: { coat: '#3d5a3a', pants: '#3a3530', skin: '#d8a989', hair: '#9a9590', hat: 'cap', hatColor: '#b9a37a', beard: '#b5b0aa', scarf: '#8a3a2a' },
     personality: 'Sert görünümlü ama yumuşak kalpli. Batıl inançlı, az konuşur.',
     loves: ['lufer', 'levrek'], likes: ['sardalya', 'istavrit', 'halat', 'mantar', 'kefal'], dislikes: ['deniz_kabugu', 'yosun'], hates: ['eski_bot'],
     schedule: [[6, 7, 'ev_elias'], [7, 17, 'iskele_elias'], [17, 18, 'market'], [18, 22, 'bar_masa'], [22, 26, 'ev_elias']],
@@ -54,7 +54,7 @@ export const NPCS = [
   },
   {
     id: 'marta', name: 'Marta', title: 'Bakkal',
-    look: { coat: '#7a2f35', pants: '#4a3530', skin: '#e3b596', hair: '#8a4a2a', hat: 'none', apron: '#e8dcc0' },
+    look: { coat: '#7a2f35', pants: '#4a3530', skin: '#e3b596', hair: '#8a4a2a', hat: 'none', apron: '#e8dcc0', hairStyle: 'long' },
     personality: 'Konuşkan, sıcak, meraklı. Kasabanın tüm dedikodusunu bilir.',
     loves: ['meyve', 'mantar'], likes: ['bitki', 'deniz_kabugu', 'cipura', 'deniz_cami'], dislikes: ['hurda', 'yosun'], hates: ['eski_bot'],
     schedule: [[6, 8, 'ev_marta'], [8, 18, 'market'], [18, 19, 'kilise'], [19, 20, 'meydan'], [20, 26, 'ev_marta']],
@@ -145,7 +145,7 @@ export const NPCS = [
   },
   {
     id: 'hale', name: 'Hale', title: 'Belediye Başkanı',
-    look: { coat: '#4a4f5a', pants: '#3a3f4a', skin: '#e0b090', hair: '#1a1a1e', hat: 'bun' },
+    look: { coat: '#4a4f5a', pants: '#3a3f4a', skin: '#e0b090', hair: '#1a1a1e', hat: 'bun', scarf: '#9a3a4a' },
     personality: 'Resmi, kasabanın itibarına düşkün. Geçmişi kapalı tutmak ister.',
     loves: ['kalkan', 'cipura'], likes: ['meyve', 'deniz_cami', 'mantar'], dislikes: ['hurda', 'yosun'], hates: ['eski_bot'],
     schedule: [[6, 9, 'ev_hale'], [9, 17, 'belediye'], [17, 19, 'meydan'], [19, 26, 'ev_hale']],
@@ -167,7 +167,7 @@ export const NPCS = [
   },
   {
     id: 'selin', name: 'Selin', title: 'Deniz Biyoloğu', movesIn: true,
-    look: { coat: '#2a6a6a', pants: '#3a3a40', skin: '#d8a888', hair: '#2a1a14', hat: 'none', glasses: true },
+    look: { coat: '#2a6a6a', pants: '#3a3a40', skin: '#d8a888', hair: '#2a1a14', hat: 'none', glasses: true, hairStyle: 'long', scarf: '#d8d0b8' },
     personality: 'Bilimsel, meraklı, şüpheci. Denizdeki anormallikleri ölçmeye gelmiş.',
     loves: ['kristal_balik', 'gumus_ruh', 'fener_baligi'], likes: ['kor_balik', 'ahtapot', 'deniz_cami', 'kristal'], dislikes: ['eski_bot'], hates: ['yosun'],
     schedule: [[6, 9, 'kulube_selin'], [9, 17, 'sahil_selin'], [17, 21, 'bar_masa2'], [21, 26, 'kulube_selin']],

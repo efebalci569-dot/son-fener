@@ -15,18 +15,19 @@ export function waveHeight(x, z, t) {
 
 export class Sea {
   constructor(scene) {
-    this.W = 640; this.D = 330;
+    this.W = 640; this.D = 360;
     this.cell = 4;
     const geo = new THREE.PlaneGeometry(this.W, this.D, this.W / this.cell, 66);
     geo.rotateX(-Math.PI / 2);
-    // z: +14 .. -316
-    geo.translate(0, 0, 14 - this.D / 2);
+    // z: +44 .. -286 (kamera geri çekildiğinde ön kenar görünmesin)
+    const Z0 = 44;
+    geo.translate(0, 0, Z0 - this.D / 2);
     // Yakın sıraları sıklaştır (z uzaklığını üstel dağıt)
     const p = geo.attributes.position;
     for (let i = 0; i < p.count; i++) {
       const z = p.getZ(i);
-      const t = (14 - z) / this.D; // 0..1
-      p.setZ(i, 14 - Math.pow(t, 1.7) * this.D);
+      const t = (Z0 - z) / this.D; // 0..1
+      p.setZ(i, Z0 - Math.pow(t, 1.6) * this.D);
     }
     this.base = Float32Array.from(p.array);
     this.mat = new THREE.MeshStandardMaterial({ color: '#2a5a6a', flatShading: true, roughness: 0.42, metalness: 0.05, transparent: true, opacity: 0.94 });

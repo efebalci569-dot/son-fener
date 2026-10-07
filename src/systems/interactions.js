@@ -3,6 +3,7 @@ import { G, canAct } from '../game.js';
 import { Input } from '../core/input.js';
 import { FENER_X, FLOOR_Y, CAVE_X, SEA_X, caveGround } from '../world/interiors.js';
 import { LIGHTHOUSE_X } from '../world/world.js';
+import { SANDAL_DOCK } from '../world/terrain.js';
 import { startDive } from './fishing.js';
 import { Rel } from './relations.js';
 import { WEATHER } from '../world/weather.js';
@@ -72,12 +73,15 @@ export function buildInteractions() {
       } else G.ui.dialog({ speaker: null, lines: ['Duvara bir isim kazınmış: J. VARGA.', 'Altında, daha yeni bir el yazısıyla: "Işığı gördüm. Gidiyorum."'] });
     },
   });
+  // Fener sandalı: sahil ↔ ada
+  add({ x: SANDAL_DOCK.beach - 1.5, range: 1.5, enabled: () => G.sandal.side === 'beach' && !G.sandal.driving, label: '⛵ Sandala bin — Fener Adası\'na', action: () => G.sandal.board() });
+  add({ x: SANDAL_DOCK.island + 1.6, range: 1.5, enabled: () => G.sandal.side === 'island' && !G.sandal.driving, label: '⛵ Sandala bin — Sahile', action: () => G.sandal.board() });
   add({ x: -65.2, label: '🚗 Araban', action: () => G.ui.dialog({ speaker: null, lines: ['Yolculuktan kalma eski araban.', 'Torpidoda bir harita var. "Son Fener" kasabası kırmızı kalemle daire içine alınmış. Bunu sen mi yaptın? Hatırlamıyorsun.'] }) });
   fishSpot(41.2, 'iskele', { minDist: 3, maxDist: 10 });
   fishSpot(78, 'sahil', { minDist: 4.5, maxDist: 12 });
   fishSpot(108.5, 'sahil', { minDist: 4.5, maxDist: 12 });
   fishSpot(-171, 'sahil', { minDist: 4.5, maxDist: 12 });
-  fishSpot(167.5, 'derin', { minDist: 11, maxDist: 20, minTier: 2 });
+  fishSpot(197.5, 'derin', { minDist: 11, maxDist: 20, minTier: 2 });
   add({
     x: 24, enabled: () => G.inv.has('ag'),
     label: () => !S().net ? '🕸️ Ağı kur' : (S().netCatch ? '🕸️ Ağı topla' : '🕸️ Ağ kurulu (yarın topla)'),
@@ -100,8 +104,8 @@ export function buildInteractions() {
       G.ui.dialog({ speaker: null, lines: ['Yarı batık, eski bir balıkçı teknesi. Kıç tarafında silik harflerle "JONAS" yazıyor.', 'Atölyedeki İvo belki onarabilir. (İvo ile en az 3 kalp)'] });
     },
   });
-  add({ x: 118, enabled: () => S().nightEvent === 'ayak_izleri' && G.night.prints.visible && !S().clues.includes('c05'), label: '👣 Islak ayak izleri', action: () => G.night.inspectPrints() });
-  add({ x: 116, label: '🤿 Sığ resif (dalış)', enabled: () => G.inv.has('dalis'), action: () => { G.ui.toast('Dalıyorsun...', 'info'); startDive('sahil'); } });
+  add({ x: 113.2, enabled: () => S().nightEvent === 'ayak_izleri' && G.night.prints.visible && !S().clues.includes('c05'), label: '👣 Islak ayak izleri', action: () => G.night.inspectPrints() });
+  add({ x: 110.8, label: '🤿 Sığ resif (dalış)', enabled: () => G.inv.has('dalis'), action: () => { G.ui.toast('Dalıyorsun...', 'info'); startDive('sahil'); } });
 
   // ---------------- FENER İÇİ ----------------
   const F = (floor, x, o) => add({ area: 'fener_ic', floor, x: FENER_X + x, range: 0.8, ...o });

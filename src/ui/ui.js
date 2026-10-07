@@ -13,6 +13,8 @@ import { HEART_NAMES, Rel } from '../systems/relations.js';
 import { NIGHT_EVENTS } from '../systems/night.js';
 import { fmtClock, clamp } from '../core/utils.js';
 import { saveGame, hasSave, deleteSave } from '../core/state.js';
+import { Settings } from '../core/settings.js';
+import { LIGHTHOUSE_X } from '../world/world.js';
 
 const $ = id => document.getElementById(id);
 const v3 = new THREE.Vector3();
@@ -21,7 +23,7 @@ const heartsStr = n => '❤'.repeat(n) + '♡'.repeat(6 - n);
 
 const ZONE_SUB = {
   tersane: 'Paslı vinçler ve unutulmuş gemiler', orman: 'Çam kokusu ve eski bir maden', kasaba: 'Küçük, sessiz, bir şeyler saklayan',
-  iskele: 'Balıkçıların sabırla beklediği yer', sahil: 'Denizin getirdiği her şey', fener: 'Yirmi yıldır karanlık',
+  iskele: 'Balıkçıların sabırla beklediği yer', sahil: 'Denizin getirdiği her şey', bogaz: 'Karşıya yalnızca sandalla geçilir', fener: 'Yirmi yıldır karanlık',
 };
 
 export class UI {
@@ -48,7 +50,7 @@ export class UI {
   }
   subtitle(text) { const s = $('subtitle'); s.textContent = text; s.classList.add('show'); clearTimeout(this._st); this._st = setTimeout(() => s.classList.remove('show'), 2600); }
   ambientLine(text) { const s = $('ambient'); s.textContent = text; s.classList.add('show'); clearTimeout(this._at); this._at = setTimeout(() => s.classList.remove('show'), 4200); }
-  shake(a) { G.camShake = Math.max(G.camShake ?? 0, a); }
+  shake(a) { if (Settings.data.shake) G.camShake = Math.max(G.camShake ?? 0, a); }
   zoneTitle(name, sub) {
     const z = $('zonetitle');
     z.innerHTML = `<h2>${esc(name.toLocaleUpperCase('tr-TR'))}</h2>${sub ? `<p>${esc(sub)}</p>` : ''}`;
@@ -67,6 +69,11 @@ export class UI {
     setTimeout(() => { cb?.(); setTimeout(() => f.classList.remove('on'), 120); }, 650);
   }
   beamHud(on) { $('beamhud').classList.toggle('show', on); }
+  driveHud(on) {
+    const el = $('beamhud');
+    el.classList.toggle('show', on);
+    if (on) el.innerHTML = '<b>⛵ Sandal</b> — <kbd>A</kbd>/<kbd>D</kbd> gaz · <kbd>Shift</kbd> tam yol · iskeleye yanaşınca <kbd>E</kbd> in';
+  }
 
   // ------------------------------------------------ diyalog
   dialog(o) {
@@ -140,7 +147,9 @@ export class UI {
 
   // ------------------------------------------------ paneller
   openPanel(kind, render, small = false) {
-    this.panel = { kind, render, small };
+    // paneli açan modu hatırla (oyun, duraklatma menüsü ya da başlık ekranı)
+    const prev = G.mode === 'panel' ? this.panel?.prev : G.mode;
+    this.panel = { kind, render, small, prev };
     G.mode = 'panel';
     this.renderPanel();
   }
@@ -151,6 +160,12 @@ export class UI {
     const { title, tabs, body, foot } = p.render();
     el.innerHTML = `<div class="pn ${p.small ? 'small' : ''}"><header><h2>${title}</h2>${foot ?? ''}<button class="x" data-act="close">✕</button></header>${tabs ?? ''}<div class="body">${body}</div></div>`;
     el.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); this.onAct(b.dataset.act, b.dataset.arg, b); }));
+    el.querySelectorAll('input[type=range][data-key]').forEach(inp => inp.addEventListener('input', () => {
+      Settings.set(inp.dataset.key, +inp.value);
+      G.applySettings();
+      const lab = inp.parentElement.querySelector('span');
+      if (lab) lab.textContent = inp.dataset.fmt === 'pct' ? `%${Math.round(+inp.value * 100)}` : inp.value;
+    }));
     if (this._scroll !== undefined && this._scrollKind === p.kind + this.nbTab) el.querySelector('.body').scrollTop = this._scroll;
   }
   rerender() {
@@ -159,8 +174,12 @@ export class UI {
     this.renderPanel();
   }
   closePanel() {
+    const prev = this.panel?.prev;
     this.panel = null; $('panel').classList.remove('show'); $('panel').innerHTML = '';
-    if (G.mode === 'panel') G.mode = 'play';
+    if (G.mode !== 'panel') return;
+    if (prev === 'paused') { G.mode = 'paused'; $('pause').classList.add('show'); }
+    else if (prev === 'title') { G.mode = 'title'; $('title').classList.add('show'); }
+    else G.mode = 'play';
   }
   closeAll() { this.closePanel(); if (this.dlg) this.closeDialog(); $('pause').classList.remove('show'); }
 
@@ -212,6 +231,15 @@ export class UI {
       case 'yes': { const cb = this.panel.yes; this.closePanel(); cb(); return; }
       case 'no': this.closePanel(); return;
       case 'report': this.finishReport(); return;
+      case 'settab': this.setTab = arg; G.audio.click(); break;
+      case 'set': {
+        const i = arg.indexOf(':');
+        const key = arg.slice(0, i), raw = arg.slice(i + 1);
+        const val = raw === 'true' ? true : raw === 'false' ? false : (isNaN(+raw) ? raw : +raw);
+        Settings.set(key, val); G.applySettings(); G.audio.click();
+        break;
+      }
+      case 'setreset': Settings.reset(); G.applySettings(); G.audio.click(); break;
     }
     if (this.panel) this.rerender();
   }
@@ -336,12 +364,12 @@ export class UI {
   tab_harita() {
     const S = G.state;
     const min = ZONES[0].from, max = ZONES[ZONES.length - 1].to, W = max - min;
-    const cols = { tersane: '#6a5244', orman: '#355a2c', kasaba: '#77706a', iskele: '#7a5e42', sahil: '#c8b080', fener: '#6a6c70' };
+    const cols = { tersane: '#6a5244', orman: '#355a2c', kasaba: '#77706a', iskele: '#7a5e42', sahil: '#c8b080', bogaz: '#2f5a6a', fener: '#6a6c70' };
     const locked = { tersane: !S.flags.shipyardOpen, orman: !S.flags.forestOpen };
     let h = '<div class="mapstrip">';
     for (const z of ZONES) h += `<div class="z ${locked[z.id] ? 'locked' : ''}" style="width:${(z.to - z.from) / W * 100}%;background:${cols[z.id]}">${esc(z.name)}</div>`;
     const mk = (x, ic, t) => `<span class="mk" style="left:${(x - min) / W * 100}%" title="${esc(t)}">${ic}</span>`;
-    h += mk(150, '🗼', 'Deniz Feneri') + mk(-118, '🕳️', 'Mağara') + mk(-35.4, '⛪', 'Kilise');
+    h += mk(LIGHTHOUSE_X, '🗼', 'Deniz Feneri') + mk(-118, '🕳️', 'Mağara') + mk(-35.4, '⛪', 'Kilise');
     if (G.area.id === 'world') h += mk(G.player.x, '📍', 'Sen');
     if (G.skills.level('kesif') >= 5) for (const n of G.nodes) if (n.def.hidden && n.available && n.area === 'world') h += mk(n.x, '✨', 'Gizli nokta');
     for (const npc of G.npcs) if (npc.rig.root.visible || (npc.visible && G.area.id !== 'world')) h += mk(npc.x, `<b style="font-size:11px;background:${npc.def.look.coat};padding:1px 4px;border-radius:4px;color:#fff">${npc.def.name[0]}</b>`, npc.def.name);
@@ -350,7 +378,8 @@ export class UI {
     const info = {
       tersane: 'Hurda, demir, eski sandıklar. Denizci kulübesi ve liman ofisi burada.', orman: 'Odun, reçine, mantar, bitki ve meyve. Eski maden mağarası (demir, bakır, kristal).',
       kasaba: 'Market (Marta), Martı Bar (Tomas), Atölye (İvo), Belediye (Hale), eski kilise.', iskele: 'Balık tutma, ağ kurma ve tekne.',
-      sahil: 'Odun, kabuk, deniz camı, hurda ve gemi enkazları. Gece... dikkatli ol.', fener: 'Senin evin. Fener lambası, uçurumdan derin su balıkları.',
+      sahil: 'Odun, kabuk, deniz camı, hurda ve gemi enkazları. Gece... dikkatli ol.', bogaz: 'Fener adasına sahildeki iskeleden sandalla geçilir.',
+      fener: 'Senin evin. Fener lambası, uçurumdan derin su balıkları.',
     };
     for (const z of ZONES) h += `<div class="row"><div class="grow"><div class="ttl">${esc(z.name)}${locked[z.id] ? ' 🔒' : ''}</div><div class="sub">${esc(info[z.id])}</div></div></div>`;
     if (G.skills.level('kesif') < 5) h += '<p class="hint">Keşif Lv.5 ile haritada gizli noktaları görebilirsin.</p>';
@@ -469,7 +498,7 @@ export class UI {
     const can = hasSave();
     el.innerHTML = `<div class="in"><h1>Son<br>Fener</h1>
       <div class="tag">Kıyıda sessiz bir kasaba. Yirmi yıldır karanlık bir fener.<br>Ve denizin seksen yıldır sakladığı bir sır.</div>
-      <div class="menu">${can ? '<button id="t-cont">Devam Et</button>' : ''}<button id="t-new">Yeni Oyun</button></div>
+      <div class="menu">${can ? '<button class="mbtn" id="t-cont"><i>▶</i>Devam Et</button>' : ''}<button class="mbtn" id="t-new"><i>✦</i>Yeni Oyun</button><button class="mbtn" id="t-set"><i>⚙</i>Ayarlar</button></div>
       <div class="ctr"><kbd>A</kbd><kbd>D</kbd> yürü · <kbd>Shift</kbd> koş · <kbd>Boşluk</kbd> zıpla · <kbd>E</kbd> etkileşim<br>
       <kbd>Tab</kbd> defter · <kbd>J</kbd> gizem defteri · <kbd>L</kbd> el feneri · <kbd>G</kbd> işaret fişeği · <kbd>M</kbd> müzik · <kbd>Esc</kbd> menü</div>
       <div class="note">Kulaklıkla oynaman önerilir. Tüm sesler ve modeller gerçek zamanlı üretilir.</div></div>`;
@@ -477,30 +506,86 @@ export class UI {
     const nb = el.querySelector('#t-new');
     nb.addEventListener('click', () => {
       // kayıt varsa iki adımlı onay
-      if (can && !nb.dataset.sure) { nb.dataset.sure = '1'; nb.textContent = 'Kayıt silinecek — emin misin?'; nb.style.color = 'var(--red)'; return; }
+      if (can && !nb.dataset.sure) { nb.dataset.sure = '1'; nb.innerHTML = '<i>!</i>Kayıt silinecek — emin misin?'; nb.classList.add('danger'); return; }
       if (can) deleteSave();
       el.classList.remove('show'); onNew();
     });
     el.querySelector('#t-cont')?.addEventListener('click', () => { el.classList.remove('show'); onCont(); });
+    el.querySelector('#t-set').addEventListener('click', () => { G.audio.init(); G.audio.click(); this.openSettings(); });
   }
-  togglePause(on) {
+
+  // --- duraklatma menüsü
+  togglePause(on) { if (on) this.openPause(); else this.closePause(); }
+  openPause() {
+    if (G.mode === 'paused') return;
+    this.pauseReturn = G.mode; // yalnızca gerçekten oyundan gelirken kaydedilir
+    G.mode = 'paused';
     const el = $('pause');
-    if (on) {
-      G.prevMode = G.mode; G.mode = 'paused';
-      el.innerHTML = `<div class="in"><h2>Duraklatıldı</h2>
-        <button data-p="resume">Devam et</button><button data-p="save">Kaydet</button><button data-p="music">Müzik: ${G.audio.musicOn ? 'Açık' : 'Kapalı'}</button><button data-p="title">Ana menüye dön</button>
-        <div class="ctr"><b>Kontroller</b><br>A/D yürü · Shift koş · Boşluk zıpla · E etkileşim · Tab defter · J gizem · L el feneri · G işaret fişeği · M müzik<br>
-        Balık: Boşluk basılı tutup bırak (atış) → şamandıra batınca Boşluk (kancala) → Boşluk basılı sar, balık çekerken bırak.<br>
-        Fener: Akşam lamba odasına çık → yağ ekle → yak. "Feneri yönet" ile ışığı A/D ile kendin çevir.</div></div>`;
-      el.classList.add('show');
-      el.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => {
-        const p = b.dataset.p;
-        if (p === 'resume') this.togglePause(false);
-        if (p === 'save') { saveGame(G.state); this.toast('💾 Kaydedildi.', 'info'); }
-        if (p === 'music') { G.audio.musicOn = !G.audio.musicOn; this.togglePause(true); }
-        if (p === 'title') { saveGame(G.state); location.reload(); }
-      }));
-    } else { el.classList.remove('show'); G.mode = G.prevMode ?? 'play'; }
+    el.innerHTML = `<div class="pcard"><h2>Duraklatıldı</h2><div class="psub">Gün ${G.state.day} · ${fmtClock(G.hour)}</div>
+      <div class="menu">
+        <button class="mbtn" data-p="resume"><i>▶</i>Oyuna Dön</button>
+        <button class="mbtn" data-p="settings"><i>⚙</i>Ayarlar</button>
+        <button class="mbtn" data-p="save"><i>💾</i>Kaydet</button>
+        <button class="mbtn" data-p="title"><i>⌂</i>Ana Menü</button>
+      </div>
+      <div class="ctr">Esc ile oyuna dönebilirsin.</div></div>`;
+    el.classList.add('show');
+    el.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => {
+      G.audio.click();
+      const p = b.dataset.p;
+      if (p === 'resume') this.closePause();
+      if (p === 'settings') { el.classList.remove('show'); this.openSettings(); }
+      if (p === 'save') { saveGame(G.state); this.toast('💾 Oyun kaydedildi.', 'info'); }
+      if (p === 'title') { saveGame(G.state); location.reload(); }
+    }));
+  }
+  closePause() {
+    $('pause').classList.remove('show');
+    G.mode = this.pauseReturn && this.pauseReturn !== 'paused' ? this.pauseReturn : 'play';
+    this.pauseReturn = null;
+  }
+
+  // --- ayarlar
+  openSettings(tab) {
+    if (tab) this.setTab = tab;
+    this.setTab ??= 'grafik';
+    $('title').classList.remove('show');
+    $('pause').classList.remove('show');
+    this.openPanel('settings', () => this.renderSettings());
+  }
+  renderSettings() {
+    const d = Settings.data;
+    const tabs = [['grafik', '🖥️ Grafik'], ['ses', '🔊 Ses'], ['oyun', '🎮 Oyun'], ['kontrol', '⌨️ Kontroller']];
+    const tabHtml = `<div class="tabs">${tabs.map(([k, l]) => `<button class="tab ${this.setTab === k ? 'on' : ''}" data-act="settab" data-arg="${k}">${l}</button>`).join('')}</div>`;
+    const seg = (key, opts) => `<div class="segc">${opts.map(([v, l]) => `<button class="${d[key] === v ? 'on' : ''}" data-act="set" data-arg="${key}:${v}">${l}</button>`).join('')}</div>`;
+    const onoff = key => seg(key, [[true, 'Açık'], [false, 'Kapalı']]);
+    const slider = (key, min, max, step, fmt) => `<div class="sl"><input type="range" min="${min}" max="${max}" step="${step}" value="${d[key]}" data-key="${key}" data-fmt="${fmt ?? ''}"><span>${fmt === 'pct' ? `%${Math.round(d[key] * 100)}` : d[key]}</span></div>`;
+    const row = (label, hint, ctl) => `<div class="srow"><div><div class="ttl">${label}</div><div class="sub">${hint}</div></div>${ctl}</div>`;
+    let h = '';
+    if (this.setTab === 'grafik') {
+      h += row('Kalite', 'Hazır ayar. Aşağıdaki ayarları tek tek değiştirirsen "Özel" olur.', seg('quality', [['dusuk', 'Düşük'], ['orta', 'Orta'], ['yuksek', 'Yüksek'], ['ultra', 'Ultra']]) + (d.quality === 'ozel' ? '<span class="hint" style="margin-left:8px">Özel</span>' : ''));
+      h += row('Çözünürlük', 'Düşük değerler eski bilgisayarlarda akıcılığı artırır.', slider('resScale', 0.5, 1.5, 0.05, 'pct'));
+      h += row('Gölgeler', 'Gölge kalitesi en çok performansı etkileyen ayardır.', seg('shadows', [['kapali', 'Kapalı'], ['dusuk', 'Düşük'], ['yuksek', 'Yüksek'], ['ultra', 'Ultra']]));
+      h += row('Işık parlaması', 'Fener, lamba ve pencerelerin etrafındaki ışıma (bloom).', onoff('bloom'));
+      h += row('Film greni', 'Sinematik hafif gren efekti.', onoff('grain'));
+      h += row('Kamera sarsıntısı', 'Gök gürültüsü ve olaylarda kamera sarsılır.', onoff('shake'));
+      h += row('FPS göstergesi', 'Ekranın köşesinde kare hızını göster.', onoff('fps'));
+    } else if (this.setTab === 'ses') {
+      h += row('Ana ses', 'Tüm seslerin düzeyi.', slider('master', 0, 100, 1));
+      h += row('Müzik', 'Üretken müzik ve gece dronu.', slider('music', 0, 100, 1));
+      h += row('Efektler', 'Adımlar, olta, araçlar, fener, sandal motoru...', slider('sfx', 0, 100, 1));
+      h += row('Ortam', 'Dalgalar, rüzgâr ve yağmur.', slider('ambient', 0, 100, 1));
+    } else if (this.setTab === 'oyun') {
+      h += row('Gün uzunluğu', 'Bir oyun gününün (06:00–02:00) gerçek süresi.', seg('dayLength', [['kisa', 'Kısa · 8 dk'], ['normal', 'Normal · 12 dk'], ['uzun', 'Uzun · 18 dk']]));
+      h += `<p style="margin-top:18px"><button class="btn ghost" data-act="setreset">Tüm ayarları sıfırla</button></p>`;
+    } else {
+      const k = (a, b) => `<div class="srow"><div class="ttl">${b}</div><div>${a}</div></div>`;
+      h += k('<kbd>A</kbd> <kbd>D</kbd> / <kbd>←</kbd> <kbd>→</kbd>', 'Yürü') + k('<kbd>Shift</kbd>', 'Koş') + k('<kbd>Boşluk</kbd> / <kbd>W</kbd>', 'Zıpla')
+        + k('<kbd>E</kbd>', 'Etkileşim · konuş · topla · sandala bin/in') + k('<kbd>Tab</kbd> / <kbd>I</kbd>', 'Bekçinin Defteri') + k('<kbd>J</kbd>', 'Gizem Defteri')
+        + k('<kbd>L</kbd>', 'El feneri') + k('<kbd>G</kbd>', 'İşaret fişeği') + k('<kbd>M</kbd>', 'Müziği aç/kapa') + k('<kbd>Esc</kbd>', 'Menü / geri');
+      h += '<p class="hint" style="margin-top:14px">Balık: Boşluğu basılı tutup bırak (atış) → şamandıra batınca Boşluk (kancala) → Boşluğu basılı tutup sar, balık çekerken bırak.<br>Sandal: A/D ile gaz ver, Shift ile hızlan. İskeleye yanaşınca E ile in.<br>Fener: Akşam lamba odasına çık, yağ ekle, yak. "Feneri yönet" ile ışığı A/D ile çevir.</p>';
+    }
+    return { title: '⚙ Ayarlar', tabs: tabHtml, body: h };
   }
 
   ending() {
@@ -521,9 +606,9 @@ export class UI {
   // ------------------------------------------------ kare güncellemesi
   prompt(best) {
     const el = $('prompt');
-    if (!best || G.mode !== 'play') { el.style.display = 'none'; return; }
+    if (!best || (G.mode !== 'play' && !best.force)) { el.style.display = 'none'; return; }
     const label = typeof best.label === 'function' ? best.label() : best.label;
-    const gy = best.node ? best.node.mesh.position.y + 1.4 : (best.npc ? best.npc.y + 2.5 : G.area.ground(best.x, G.player) + (best.y ?? 2.3));
+    const gy = best.wy !== undefined ? best.wy : best.node ? best.node.mesh.position.y + 1.4 : (best.npc ? best.npc.y + 2.5 : G.area.ground(best.x, G.player) + (best.y ?? 2.3));
     const z = best.npc ? best.npc.z : best.node ? best.node.z : 0;
     const p = this.project(best.x, gy, z);
     el.style.display = 'block';
@@ -536,6 +621,7 @@ export class UI {
     if (m === 'dialogue') return;
     if (this.reportCb && Input.wasPressed('KeyE', 'Space', 'Enter')) { this.finishReport(); return; }
     if (m === 'paused') { if (Input.wasPressed('Escape')) this.togglePause(false); return; }
+    if (m === 'drive') { if (Input.wasPressed('Escape')) this.togglePause(true); return; }
     if (m === 'panel') {
       if (Input.wasPressed('Escape') || (this.panel?.kind === 'notebook' && Input.wasPressed('Tab', 'KeyI', 'KeyJ'))) { this.closePanel(); G.audio.click(); }
       return;
@@ -607,12 +693,12 @@ export class UI {
     const zb = $('zonebar');
     if (G.area.id === 'world') {
       const min = ZONES[0].from, max = ZONES[ZONES.length - 1].to, W = max - min;
-      const cols = { tersane: '#6a5244', orman: '#3e6531', kasaba: '#8a8278', iskele: '#86684a', sahil: '#d6bf8e', fener: '#8a8c90' };
+      const cols = { tersane: '#6a5244', orman: '#3e6531', kasaba: '#8a8278', iskele: '#86684a', sahil: '#d6bf8e', bogaz: '#3a6a7a', fener: '#8a8c90' };
       const locked = { tersane: !S.flags.shipyardOpen, orman: !S.flags.forestOpen };
       const cur = zoneAt(G.player.x).id;
       let h = '<div class="bar">';
       for (const z of ZONES) h += `<div class="seg ${locked[z.id] ? 'locked' : ''}" style="width:${(z.to - z.from) / W * 100}%;background:${cols[z.id]}">${z.id === cur ? `<span>${esc(z.name)}</span>` : ''}</div>`;
-      h += `<span class="lh" style="left:${(150 - min) / W * 100}%">🗼</span>`;
+      h += `<span class="lh" style="left:${(LIGHTHOUSE_X - min) / W * 100}%">🗼</span>`;
       if (G.skills.level('kesif') >= 5) for (const n of G.nodes) if (n.def.hidden && n.available && n.area === 'world') h += `<span class="dot" style="left:${(n.x - min) / W * 100}%;background:#fff4c0"></span>`;
       h += `<span class="me" style="left:${(G.player.x - min) / W * 100}%"></span></div>`;
       zb.innerHTML = h;

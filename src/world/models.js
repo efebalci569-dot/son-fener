@@ -1,5 +1,6 @@
 // Prosedürel low-poly model fabrikası. Hiçbir harici model/doku kullanılmaz.
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { hash2, randRange } from '../core/utils.js';
 
 const matCache = new Map();
@@ -437,18 +438,64 @@ export function makeGhostShip() {
   return { group: g, mats };
 }
 
+// Klasik ahşap panelli station wagon
 export function makeCar() {
   const g = new THREE.Group();
-  g.add(box(3.8, 0.8, 1.7, '#6a8a9a', 0, 0.75, 0));
-  g.add(box(2.1, 0.7, 1.55, '#5a7a8a', -0.2, 1.5, 0));
-  const glass = mat('#2a3a4a', { roughness: 0.2 });
-  g.add(box(2.12, 0.5, 1.4, glass, -0.2, 1.52, 0));
-  for (const [x, z] of [[1.2, 0.85], [-1.2, 0.85], [1.2, -0.85], [-1.2, -0.85]]) {
-    const w = cyl(0.36, 0.36, 0.25, '#1a1a1a', 10, x, 0.36, z); w.rotation.x = Math.PI / 2; g.add(w);
+  const rb = (w, h, d, r, m, x, y, z) => { const o = shade(new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 3, r), m)); o.position.set(x, y, z); g.add(o); return o; };
+  const paint = new THREE.MeshStandardMaterial({ color: '#3f7088', roughness: 0.32, metalness: 0.35 });
+  const wood = new THREE.MeshStandardMaterial({ color: '#8a5a32', roughness: 0.7 });
+  const chrome = new THREE.MeshStandardMaterial({ color: '#d8dde2', roughness: 0.15, metalness: 0.95 });
+  const glass = new THREE.MeshStandardMaterial({ color: '#1c2a36', roughness: 0.08, metalness: 0.6 });
+  const rubber = new THREE.MeshStandardMaterial({ color: '#141414', roughness: 0.9 });
+  const dark = new THREE.MeshStandardMaterial({ color: '#1a1d22', roughness: 0.6 });
+  // gövde
+  rb(4.3, 0.62, 1.82, 0.22, paint, 0, 0.74, 0);
+  rb(1.3, 0.2, 1.7, 0.1, paint, 1.45, 1.1, 0); // kaput
+  // ahşap yan panel
+  for (const s of [-1, 1]) rb(3.0, 0.3, 0.04, 0.02, wood, -0.45, 0.82, s * 0.915);
+  for (const s of [-1, 1]) rb(3.04, 0.035, 0.05, 0.012, chrome, -0.45, 0.99, s * 0.92);
+  // kabin
+  rb(2.75, 0.7, 1.66, 0.2, paint, -0.55, 1.38, 0);
+  rb(2.6, 0.5, 1.7, 0.14, glass, -0.55, 1.42, 0);
+  for (const x of [0.62, -0.25, -1.1]) rb(0.1, 0.52, 1.72, 0.03, paint, x, 1.42, 0); // direkler
+  rb(2.8, 0.08, 1.7, 0.04, paint, -0.55, 1.74, 0); // tavan
+  // tavan rafı ve bavullar
+  for (const s of [-1, 1]) rb(2.3, 0.05, 0.05, 0.02, chrome, -0.6, 1.86, s * 0.7);
+  for (const x of [-1.4, -0.6, 0.2]) rb(0.05, 0.05, 1.44, 0.02, chrome, x, 1.86, 0);
+  rb(0.95, 0.42, 0.9, 0.06, new THREE.MeshStandardMaterial({ color: '#6a4628', roughness: 0.75 }), -1.0, 2.1, 0.05);
+  rb(0.7, 0.32, 0.7, 0.05, new THREE.MeshStandardMaterial({ color: '#b8893a', roughness: 0.7 }), -0.1, 2.05, -0.1);
+  rb(0.08, 0.44, 0.94, 0.02, dark, -1.0, 2.1, 0.05); // kemer
+  // tamponlar
+  rb(0.16, 0.18, 1.9, 0.07, chrome, 2.18, 0.58, 0);
+  rb(0.16, 0.18, 1.9, 0.07, chrome, -2.18, 0.58, 0);
+  // ızgara ve farlar
+  rb(0.06, 0.26, 0.9, 0.03, dark, 2.15, 0.84, 0);
+  for (let i = 0; i < 4; i++) rb(0.07, 0.025, 0.86, 0.01, chrome, 2.17, 0.75 + i * 0.06, 0);
+  const lampM = new THREE.MeshStandardMaterial({ color: '#fff3c8', emissive: '#ffd890', emissiveIntensity: 0.35, roughness: 0.1 });
+  for (const s of [-1, 1]) {
+    const ring = shade(new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.06, 18), chrome)); ring.rotation.z = Math.PI / 2; ring.position.set(2.16, 0.86, s * 0.66); g.add(ring);
+    const l = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 18), lampM); l.rotation.z = Math.PI / 2; l.position.set(2.19, 0.86, s * 0.66); g.add(l);
+    rb(0.06, 0.2, 0.16, 0.03, new THREE.MeshStandardMaterial({ color: '#c8281e', emissive: '#801010', emissiveIntensity: 0.4, roughness: 0.2 }), -2.15, 0.86, s * 0.68);
+    rb(0.18, 0.1, 0.06, 0.03, chrome, 0.75, 1.2, s * 0.9); // ayna
   }
-  g.add(box(0.1, 0.2, 0.35, '#ffe9a8', 1.92, 0.85, 0.55));
-  g.add(box(0.1, 0.2, 0.35, '#ffe9a8', 1.92, 0.85, -0.55));
-  g.add(box(1.0, 0.5, 0.9, '#7a5a3a', -1.2, 2.1, 0)); // bavul
+  // plaka
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.15), new THREE.MeshStandardMaterial({ map: textTexture('48 SF 1987', { w: 256, h: 64, bg: '#f0ece0', fg: '#1a1a2a', font: 'bold 36px Georgia', border: '#1a1a2a' }), roughness: 0.6 }));
+  plate.rotation.y = Math.PI / 2; plate.position.set(2.27, 0.58, 0); g.add(plate);
+  // kapı çizgileri ve kolları
+  for (const s of [-1, 1]) {
+    for (const x of [0.62, -0.25]) rb(0.02, 0.5, 0.02, 0.008, dark, x, 0.83, s * 0.915);
+    for (const x of [0.4, -0.45]) rb(0.14, 0.04, 0.04, 0.015, chrome, x, 1.0, s * 0.93);
+  }
+  // tekerlekler
+  for (const [x, z] of [[1.35, 0.86], [-1.35, 0.86], [1.35, -0.86], [-1.35, -0.86]]) {
+    const tire = shade(new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.12, 10, 22), rubber));
+    tire.position.set(x, 0.39, z); g.add(tire);
+    const hub = shade(new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.2, 16), chrome));
+    hub.rotation.x = Math.PI / 2; hub.position.set(x, 0.39, z); g.add(hub);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.22, 10), dark);
+    cap.rotation.x = Math.PI / 2; cap.position.set(x, 0.39, z); g.add(cap);
+    rb(0.85, 0.12, 0.2, 0.06, dark, x, 0.84, z * 1.02); // çamurluk
+  }
   return g;
 }
 

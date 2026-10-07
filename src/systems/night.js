@@ -128,7 +128,7 @@ export class Night {
   outdoorsNear(minX, maxX) {
     return G.area.id === 'world' && G.player.x >= minX && G.player.x <= maxX;
   }
-  canSeeSea() { return G.mode === 'beam' || this.outdoorsNear(9, 172) || this.outdoorsNear(-205, -138); }
+  canSeeSea() { return G.mode === 'beam' || G.mode === 'drive' || this.outdoorsNear(9, 205) || this.outdoorsNear(-205, -138); }
 
   // ---------------- kurulumlar ----------------
   setupShip() {
@@ -197,8 +197,8 @@ export class Night {
     const pts = [];
     for (let i = 0; i < 46; i++) {
       const u = i / 45;
-      const x = 104 + u * 42;
-      const z = -5.2 + Math.min(1, u * 2.2) * 4.6 + Math.sin(u * 9) * 0.25;
+      const x = 94 + u * 22;
+      const z = -5.2 + Math.min(1, u * 1.6) * 5.2 + Math.sin(u * 9) * 0.25;
       pts.push([x, z, i]);
     }
     for (const [x, z, i] of pts) {
@@ -264,7 +264,7 @@ export class Night {
         G.audio.whisper(behind * 0.8);
         G.ui.subtitle('şşşş...');
         this.turnCheck = { t: 2.2, facing: P.rig.facing };
-        if (P.x > 9 && P.x < 122 && !this.silState) this.silDelay = 6;
+        if (P.x > 9 && P.x < 152 && !this.silState) this.silDelay = 6;
       }
       if (this.turnCheck) {
         this.turnCheck.t -= dt;
@@ -274,7 +274,7 @@ export class Night {
       if (this.silDelay !== undefined && this.silDelay !== null) { this.silDelay -= dt; if (this.silDelay <= 0) { this.silDelay = null; this.spawnSil(); } }
     }
 
-    if (e === 'siluet' && outdoors && P.x > 9 && P.x < 122 && !this.silState && this.t > 4) this.spawnSil();
+    if (e === 'siluet' && outdoors && P.x > 9 && P.x < 152 && !this.silState && this.t > 4) this.spawnSil();
     if (this.silState) this.updateSil(dt);
 
     if (e === 'hayalet_gemi') {
@@ -320,7 +320,7 @@ export class Night {
 
   spawnSil() {
     const P = G.player;
-    const x = clamp(P.x + P.rig.facing * randRange(8.5, 11), 12, 120);
+    const x = clamp(P.x + P.rig.facing * randRange(8.5, 11), 12, 150);
     this.sil.position.set(x, waveHeight(x, -7.5, G.sea.t) - 0.85, -7.5);
     this.sil.rotation.y = -Math.PI / 2;
     this.sil.visible = true;
@@ -387,8 +387,8 @@ export class Night {
 
   inspectPrints() {
     G.ui.dialog({
-      speaker: null, lines: ['Islak, çıplak ayak izleri.', 'Ama bir tuhaflık var: izler denize gitmiyor. Denizden geliyor.', 'Fenerin kapısına doğru uzanıyorlar.'],
-      onEnd: () => { G.mystery.addClue('c05'); this.log('Sahilde denizden gelen ıslak ayak izleri buldun. Fenerin kapısına uzanıyorlardı.'); },
+      speaker: null, lines: ['Islak, çıplak ayak izleri.', 'Ama bir tuhaflık var: izler denize gitmiyor. Denizden geliyor.', 'İzler sandal iskelesine kadar uzanıyor. Sanki biri... adaya, fenere geçmek istemiş.'],
+      onEnd: () => { G.mystery.addClue('c05'); this.log('Sahilde denizden gelen ıslak ayak izleri buldun. Fener sandalının iskelesine uzanıyorlardı.'); },
     });
   }
 }

@@ -9,6 +9,7 @@ import { G } from './game.js';
 import { Input } from './core/input.js';
 import { Audio } from './core/audio.js';
 import { newState, loadGame } from './core/state.js';
+import { Settings } from './core/settings.js';
 import { damp, randRange, clamp } from './core/utils.js';
 import { Environment } from './world/env.js';
 import { Sky } from './world/sky.js';
@@ -16,7 +17,8 @@ import { Sea, setWaveScale } from './world/sea.js';
 import { Weather } from './world/weather.js';
 import { buildWorld, LIGHTHOUSE_X } from './world/world.js';
 import { buildLighthouseInterior, buildCave, buildSeaArea, FENER_X } from './world/interiors.js';
-import { groundY } from './world/terrain.js';
+import { groundY, WORLD_MAX_X, STRAIT } from './world/terrain.js';
+import { Sandal } from './systems/sandal.js';
 import { Player } from './entities/player.js';
 import { NPC } from './entities/npc.js';
 import { buildNodes, updateNodes } from './entities/nodes.js';
@@ -72,9 +74,34 @@ composer.addPass(grade);
 composer.addPass(new OutputPass());
 
 addEventListener('resize', () => {
+  if (!innerWidth || !innerHeight) return;
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
 });
+
+// ------------------------------------------------------------ ayarlar
+let shadowSize = 2048;
+G.applySettings = () => {
+  const d = Settings.data;
+  const pr = Math.min(window.devicePixelRatio || 1, 2) * d.resScale;
+  renderer.setPixelRatio(pr); composer.setPixelRatio(pr);
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  const sz = { kapali: 0, dusuk: 1024, yuksek: 2048, ultra: 4096 }[d.shadows] ?? 2048;
+  const en = sz > 0;
+  if (renderer.shadowMap.enabled !== en) {
+    renderer.shadowMap.enabled = en;
+    scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); });
+  }
+  if (en && sz !== shadowSize && G.env) {
+    const sh = G.env.dir.shadow;
+    sh.mapSize.set(sz, sz); sh.map?.dispose(); sh.map = null;
+  }
+  shadowSize = sz;
+  bloom.enabled = d.bloom;
+  grade.uniforms.grain.value = d.grain ? 0.018 : 0;
+  Audio.setVolumes({ master: d.master, music: d.music, sfx: d.sfx, ambient: d.ambient });
+  document.getElementById('fps').classList.toggle('show', d.fps);
+};
 
 // ------------------------------------------------------------ bağlam
 Object.assign(G, {
@@ -90,7 +117,7 @@ G.sea = new Sea(scene);
 G.weather = new Weather(scene);
 G.world = buildWorld(G);
 G.areas.world = {
-  id: 'world', name: 'Son Fener', indoor: false, showSea: true, minX: -203, maxX: 169,
+  id: 'world', name: 'Son Fener', indoor: false, showSea: true, minX: -203, maxX: WORLD_MAX_X,
   ground: x => groundY(x), cam: { dist: 16, height: 3.4, look: 1.55, yawX: 1.6 }, refresh() { }, update() { },
 };
 G.areas.fener_ic = buildLighthouseInterior(G);
@@ -103,6 +130,7 @@ G.nodes = buildNodes();
 G.fishing = new Fishing();
 G.lamp = new Lamp();
 G.night = new Night();
+G.sandal = new Sandal();
 G.interactables = buildInteractions();
 
 G.world.refreshBoat = () => {
@@ -112,11 +140,20 @@ G.world.refreshBoat = () => {
 };
 
 // ------------------------------------------------------------ alan geçişleri
+// Yalnızca bulunulan alanın sahnesi görünür (diğerleri hem gizli hem çizilmez)
+function updateAreaVisibility() {
+  for (const a of Object.values(G.areas)) if (a.group) a.group.visible = a === G.area;
+  G.world.root.visible = G.area.id === 'world';
+}
+updateAreaVisibility();
+
 G.setArea = (id, x, floor = 0) => {
   G.area = G.areas[id];
+  updateAreaVisibility();
   G.player.floor = floor;
   G.player.setPos(x, floor);
   G.state.player = { area: id, x, floor };
+  if (id === 'world') G.sandal.placeForPlayer(x);
   G.sea.mesh.visible = G.area.showSea;
   for (const o of [G.sky.dome, G.sky.stars, G.sky.sun, G.sky.moon, G.sky.clouds]) o.visible = !G.area.indoor;
   G.area.refresh?.(G.state);
@@ -169,6 +206,10 @@ function applyState(S) {
   Day.lastHour = Math.floor(G.hour);
   let { area, x, floor } = S.player;
   if (area === 'deniz' || !G.areas[area]) { area = 'world'; x = 37; floor = 0; }
+  G.sandal.stopDriving();
+  if (!S.sandalSide) S.sandalSide = area === 'fener_ic' || (area === 'world' && x > 137) ? 'island' : 'beach';
+  if (area === 'world' && x > STRAIT.from && x < STRAIT.to) x = S.sandalSide === 'island' ? STRAIT.to : STRAIT.from;
+  G.sandal.syncSide();
   G.setArea(area, x, floor ?? 0);
   if (G.hour >= 22 && S.nightEvent) G.night.begin();
 }
@@ -203,6 +244,7 @@ function continueGame() {
 // ------------------------------------------------------------ kamera
 const cam = { x: 0, y: 5, lookX: 0, lookY: 2, dist: 16 };
 function updateCamera(dt) {
+  if (G.debugCam) { camera.position.copy(G.debugCam.pos); camera.lookAt(G.debugCam.look); return; }
   if (G.mode === 'beam') { G.lamp.beamCamera(camera); return; }
   if (G.mode === 'title') {
     const t = G.t;
@@ -225,14 +267,16 @@ function updateCamera(dt) {
     dist += k * 14 + chW * 3; h += k * 1.5 + chW * 1.2; look += k * 7 + chW * 1;
     if (G.mode === 'fishing') { dist -= 2.2; h += 0.3; }
     if (G.mode === 'dialogue' && G.ui.talkingTo) { dist -= 3; h -= 0.6; }
+    if (G.mode === 'drive') { dist += 2.5; h += 0.7; }
   }
-  const tx = P.x + P.rig.facing * 1.2;
+  const driving = G.mode === 'drive';
+  const tx = P.x + (driving ? G.sandal.vx * 0.6 : P.rig.facing * 1.2);
   const ty = P.y + h;
   if (G.camSnap) { cam.x = tx; cam.y = ty; cam.dist = dist; cam.lookX = P.x; cam.lookY = P.y + look; G.camSnap = false; }
   cam.x = damp(cam.x, tx, 3.2, dt);
   cam.y = damp(cam.y, ty, 2.2, dt);
   cam.dist = damp(cam.dist, dist, 1.5, dt);
-  cam.lookX = damp(cam.lookX, P.x + P.rig.facing * 1.6, 3.2, dt);
+  cam.lookX = damp(cam.lookX, P.x + (driving ? G.sandal.vx * 0.8 : P.rig.facing * 1.6), 3.2, dt);
   cam.lookY = damp(cam.lookY, P.y + look, 2.2, dt);
   let sx = 0, sy = 0;
   if (G.camShake > 0) { sx = (Math.random() - 0.5) * G.camShake * 0.5; sy = (Math.random() - 0.5) * G.camShake * 0.5; G.camShake = Math.max(0, G.camShake - dt * 1.2); }
@@ -245,9 +289,14 @@ let last = performance.now();
 let questT = 0, gullT = 6, saveT = 30;
 const focus = new THREE.Vector3();
 
+let fpsN = 0, fpsT = 0;
+const fpsEl = document.getElementById('fps');
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
+  const raw = (now - last) / 1000;
+  const dt = Math.min(0.05, raw);
   last = now;
+  fpsN++; fpsT += raw;
+  if (fpsT >= 0.5) { if (Settings.data.fps) fpsEl.textContent = `${Math.round(fpsN / fpsT)} FPS`; fpsN = 0; fpsT = 0; }
   G.t += dt;
   G.frameMode = G.mode;
 
@@ -255,13 +304,16 @@ function frame(now) {
   const playing = G.mode !== 'title' && G.mode !== 'paused';
   if (playing) {
     Day.update(dt);
+    G.sandal.update(dt, G.t);
     G.player.update(dt, G.t);
     G.fishing.update(dt, G.t);
     G.night.update(dt, G.t);
-    if (G.frameMode === 'play' && G.mode === 'play') updateInteractions(); else G.ui.prompt(null);
+    if (G.frameMode === 'play' && G.mode === 'play') updateInteractions();
+    else if (G.mode === 'drive') G.ui.prompt(G.sandal.canLeave() ? { force: true, label: '⚓ İskeleye in', x: G.sandal.x, wy: G.sandal.y + 2.7 } : null);
+    else G.ui.prompt(null);
     questT -= dt; if (questT <= 0) { questT = 0.5; Quests.check(); }
-    saveT -= dt; if (saveT <= 0) { saveT = 30; G.state.player.x = G.player.x; }
-  }
+    saveT -= dt; if (saveT <= 0) { saveT = 30; if (G.mode !== 'drive') G.state.player.x = G.player.x; }
+  } else if (G.mode === 'title') G.sandal.update(dt, G.t);
   if (G.mode !== 'paused') {
     for (const npc of G.npcs) npc.update(dt, G.hour, G.t);
     G.lamp.update(dt, G.t);
@@ -304,7 +356,8 @@ function frame(now) {
   grade.uniforms.night.value = G.area.id === 'magara' ? 0.6 : G.env.night;
   grade.uniforms.flash.value = G.weather.flash * 0.25;
   bloom.strength = 0.45 + G.env.night * 0.35;
-  composer.render();
+  // pencere küçültülmüş/gizliyse (sıfır boyut) çizme
+  if (innerWidth > 0 && innerHeight > 0) composer.render();
   Input.endFrame();
 }
 
@@ -338,5 +391,6 @@ addEventListener('keydown', e => {
 });
 
 if (import.meta.env.DEV) { window.__G = G; import('./dev.js'); }
+G.applySettings();
 title();
 requestAnimationFrame(loop);

@@ -3,11 +3,11 @@ import { G, canAct } from '../game.js';
 import { createCharacter, animateCharacter } from './character.js';
 import { Input } from '../core/input.js';
 import { damp } from '../core/utils.js';
-import { surfaceAt } from '../world/terrain.js';
+import { surfaceAt, STRAIT } from '../world/terrain.js';
 
 export class Player {
   constructor() {
-    this.rig = createCharacter({ coat: '#2b3a55', pants: '#2a2a33', skin: '#e2b48e', hair: '#4a3020', hat: 'beanie', hatColor: '#8a2f2f', boots: '#1e1814' });
+    this.rig = createCharacter({ coat: '#2b3a55', pants: '#2a2a33', skin: '#e2b48e', hair: '#4a3020', hat: 'beanie', hatColor: '#8a2f2f', boots: '#1e1814', scarf: '#d9a441' });
     G.scene.add(this.rig.root);
     this.x = -63; this.y = 0; this.z = 0; this.vx = 0; this.vy = 0;
     this.onGround = true; this.floor = 0;
@@ -54,6 +54,19 @@ export class Player {
 
   update(dt, t) {
     const area = G.area;
+    // sandal sürerken oyuncu sandalın kıçında oturur
+    if (G.mode === 'drive' && G.sandal?.driving) {
+      const s = G.sandal, p = s.seat();
+      this.x = p.x; this.y = p.y; this.vx = s.vx; this.vy = 0; this.onGround = true;
+      this.rig.facing = s.dir;
+      this.pose = 'drive';
+      animateCharacter(this.rig, dt, 0, 'drive', t);
+      this.rig.root.position.copy(p);
+      this.rig.root.rotation.set(s.mesh.rotation.x, 0, s.mesh.rotation.z * Math.cos(s.yaw));
+      this.updateLantern(dt, t);
+      return;
+    }
+    this.rig.root.rotation.set(0, 0, 0);
     const control = canAct() && this.lock <= 0;
     let target = 0, running = false;
     if (control) {
@@ -73,6 +86,8 @@ export class Player {
     if (area.id === 'world') {
       if (!G.state.flags.forestOpen && nx < -68.4) nx = -68.4;
       if (!G.state.flags.shipyardOpen && nx < -137.8) nx = -137.8;
+      // boğaz yüzülerek geçilemez: sandal gerekir
+      if (nx > STRAIT.from && nx < STRAIT.to) nx = this.x < 137 ? STRAIT.from : STRAIT.to;
     }
     nx = Math.max(area.minX, Math.min(area.maxX, nx));
     if (nx !== this.x + this.vx * dt) this.vx = 0;
@@ -106,11 +121,16 @@ export class Player {
       if (ph !== this.lastStep) { this.lastStep = ph; G.audio.footstep(this.surface()); }
     }
 
-    // el feneri
+    this.updateLantern(dt, t);
+  }
+
+  updateLantern(dt, t) {
+    const area = G.area;
     const hasLantern = G.inv.has('el_feneri');
     this.lantern.visible = hasLantern;
     const on = hasLantern && this.lanternOn;
-    const want = on ? (area.id === 'magara' ? 26 : 16) * (0.92 + Math.sin(t * 13) * 0.04 + Math.sin(t * 7.3) * 0.04) : 0;
+    const base = area.id === 'magara' ? 26 : G.mode === 'drive' ? 5 : 16;
+    const want = on ? base * (0.92 + Math.sin(t * 13) * 0.04 + Math.sin(t * 7.3) * 0.04) : 0;
     this.light.intensity = damp(this.light.intensity, want, 8, dt);
     this.lanternGlass.material.emissiveIntensity = on ? 2.5 : 0;
     this.light.position.set(this.x + this.rig.facing * 0.4, this.y + 1.3, this.z + 0.9);

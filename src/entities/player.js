@@ -74,7 +74,13 @@ export class Player {
     this.rig.root.position.set(this.x, this.y, this.z);
     if (this.pose === 'walk' || this.pose === 'run') {
       const ph = Math.floor(this.rig.phase / Math.PI);
-      if (ph !== this.lastStep) { this.lastStep = ph; G.audio.footstep(this.floor === -1 ? 'stone' : 'wood'); }
+      if (ph !== this.lastStep) {
+        this.lastStep = ph;
+        const surf = this.floor === -1 ? 'stone' : this.floor === 3 ? 'metal' : 'wood';
+        G.audio.footstep(surf);
+        // eski tahtalar ara sıra gıcırdar
+        if (surf === 'wood' && Math.random() < (this.pose === 'run' ? 0.12 : 0.07)) G.audio.creak(this.floor === 0 && !G.state.flags.rep_doseme ? 1.3 : 0.8);
+      }
     }
     this.updateLantern(dt, t);
   }

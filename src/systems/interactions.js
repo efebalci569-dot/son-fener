@@ -28,6 +28,7 @@ export function buildInteractions() {
     x: LIGHTHOUSE_X, label: () => G.inv.has('fener_anahtari') ? '🚪 Fenere gir' : '🚪 Fener (kilitli)',
     action: () => {
       if (!G.inv.has('fener_anahtari')) { G.ui.toast('Kapı kilitli. Anahtar belediyede olmalı.', 'warn'); return; }
+      G.audio.door(true);
       const e = G.areas.fener_ic.entrance();
       G.setArea('fener_ic', e.x, 0, e.z);
       G.player.rig.faceYaw = Math.PI / 2;

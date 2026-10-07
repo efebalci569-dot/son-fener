@@ -164,12 +164,13 @@ G.setArea = (id, x, floor = 0, z = 0) => {
   if (G.mode === 'beam') G.lamp.exitControl();
   G.camSnap = true;
   G.audio.setAmbient({ indoor: G.area.indoor ? 1 : 0, cave: id === 'magara' ? 1 : 0 });
+  G.audio.clearSpots();
   if (id === 'magara' && G.inv.has('el_feneri')) G.player.lanternOn = true;
 };
 
 G.changeFloor = (f) => {
   const from = G.player.floor;
-  G.audio.footstep('wood');
+  G.audio.stairs(f > from);
   G.mode = 'cutscene';
   G.ui.fade(() => {
     const a = G.areas.fener_ic.arrival(f, from);
@@ -188,7 +189,7 @@ G.changeFloor = (f) => {
     } else G.audio.setAmbient({ cave: 0 });
     G.ui.zoneTitle(G.areas.fener_ic.floorName(f));
   });
-  setTimeout(() => G.audio.footstep(f === -1 ? 'stone' : 'wood'), 250);
+  G.audio.clearSpots();
 };
 
 // İşaret fişeği
@@ -376,7 +377,8 @@ function frame(now) {
     gullT -= dt;
     if (gullT <= 0) { gullT = randRange(7, 16); if (G.env.night < 0.4 && x > 0 && G.weather.cur.rain < 0.4 && playing) Audio.gull(randRange(-0.7, 0.7)); }
   } else if (G.area.id === 'deniz') Audio.setAmbient({ waves: 1.2, night: G.env.night });
-  else Audio.setAmbient({ waves: G.area.id === 'fener_ic' ? 0.7 : 0.08, night: G.env.night });
+  // fenerin içinde deniz sesi yok; yerine konumlu iç mekân sesleri (lighthouse.js)
+  else Audio.setAmbient({ waves: G.area.id === 'fener_ic' ? 0 : 0.08, night: G.env.night });
   Audio.update(dt);
 
   // fişek

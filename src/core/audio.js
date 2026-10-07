@@ -11,7 +11,135 @@ class AudioEngine {
     this.target = { waves: 0.5, wind: 0.2, rain: 0, indoor: 0, night: 0, cave: 0 };
     this.t = 0;
     this.vol = { master: 80, music: 60, sfx: 80, ambient: 80 };
+    // konumlu (yerel) sürekli sesler: düzey 0..1, stereo yön -1..1
+    this.spots = {};
+    for (const k of ['fire', 'tick', 'hum', 'gears', 'bubbles', 'hiss', 'slosh', 'roofRain']) this.spots[k] = { level: 0, pan: 0 };
+    this.spotT = { pop: 0, tick: 0, gear: 0, bubble: 0, drop: 0, snap: 2 };
+    this.tickTock = false;
   }
+
+  setSpot(name, level, pan = 0) {
+    const s = this.spots[name]; if (!s) return;
+    s.level = Math.max(0, Math.min(1, level)); s.pan = Math.max(-0.9, Math.min(0.9, pan));
+  }
+  clearSpots() { for (const s of Object.values(this.spots)) s.level = 0; }
+
+  _initSpots() {
+    const ctx = this.ctx;
+    const loop = (buffer, type, freq, q) => {
+      const src = ctx.createBufferSource(); src.buffer = buffer; src.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+      const g = ctx.createGain(); g.gain.value = 0;
+      const p = ctx.createStereoPanner();
+      src.connect(f).connect(g).connect(p).connect(this.sfx);
+      src.start(0, Math.random() * 2);
+      return { f, g, p };
+    };
+    this.L = {
+      fire: loop(this.brown, 'lowpass', 420, 0.7),
+      slosh: loop(this.brown, 'lowpass', 260, 0.8),
+      hiss: loop(this.white, 'highpass', 6500, 0.5),
+      gears: loop(this.white, 'bandpass', 380, 3),
+      roofRain: loop(this.pink, 'bandpass', 1100, 0.6),
+    };
+    // jeneratör uğultusu
+    const g = ctx.createGain(); g.gain.value = 0;
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 260;
+    const p = ctx.createStereoPanner();
+    for (const [fr, type] of [[50, 'sawtooth'], [100, 'sine'], [150.5, 'sine']]) {
+      const o = ctx.createOscillator(); o.type = type; o.frequency.value = fr; o.connect(f); o.start();
+    }
+    f.connect(g).connect(p).connect(this.sfx);
+    this.L.hum = { f, g, p };
+  }
+
+  _updateSpots(dt) {
+    if (!this.L) return;
+    const now = this.ctx.currentTime, S = this.spots, T = this.spotT;
+    const set = (k, v) => { this.L[k].g.gain.setTargetAtTime(v, now, 0.25); this.L[k].p.pan.setTargetAtTime(S[k]?.pan ?? 0, now, 0.2); };
+    // soba: alçak uğultu + çıtırtılar + ara sıra çatırtı
+    const fire = S.fire.level;
+    set('fire', fire * (0.09 + Math.sin(this.t * 3.1) * 0.015));
+    if (fire > 0.02) {
+      if (Math.random() < dt * 16 * fire) this.noise({ type: 'bandpass', freq: randRange(1800, 5200), q: randRange(1, 4), attack: 0.002, decay: randRange(0.015, 0.05), gain: randRange(0.03, 0.12) * fire, pan: S.fire.pan });
+      T.snap -= dt;
+      if (T.snap <= 0) { T.snap = randRange(1.5, 5); this.noise({ type: 'highpass', freq: 1200, attack: 0.002, decay: 0.12, gain: 0.22 * fire, pan: S.fire.pan }); this.noise({ buffer: 'brown', type: 'lowpass', freq: 300, attack: 0.01, decay: 0.3, gain: 0.15 * fire, pan: S.fire.pan }); }
+    }
+    // saat: tik-tak
+    const tick = S.tick.level;
+    T.tick -= dt;
+    if (T.tick <= 0) {
+      T.tick = 1;
+      if (tick > 0.02) {
+        this.tickTock = !this.tickTock;
+        this.tone(this.tickTock ? 2300 : 1750, { type: 'square', attack: 0.001, decay: 0.03, gain: 0.025 * tick, pan: S.tick.pan });
+        this.noise({ type: 'bandpass', freq: this.tickTock ? 3200 : 2500, q: 6, attack: 0.001, decay: 0.03, gain: 0.08 * tick, pan: S.tick.pan });
+      }
+    }
+    // jeneratör
+    const hum = S.hum.level;
+    this.L.hum.g.gain.setTargetAtTime(hum * 0.07 * (0.85 + Math.sin(this.t * 7) * 0.15), now, 0.2);
+    this.L.hum.p.pan.setTargetAtTime(S.hum.pan, now, 0.2);
+    // fener mekanizması: vızıltı + dişli tıkırtısı
+    const gears = S.gears.level;
+    set('gears', gears * 0.05);
+    T.gear -= dt;
+    if (T.gear <= 0) { T.gear = 0.34; if (gears > 0.02) this.tone(randRange(820, 980), { type: 'square', attack: 0.001, decay: 0.025, gain: 0.018 * gears, pan: S.gears.pan }); }
+    // akvaryum baloncukları
+    const bub = S.bubbles.level;
+    if (bub > 0.02 && Math.random() < dt * 3 * bub) {
+      const n = 1 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < n; i++) { const f0 = randRange(450, 900); this.tone(f0, { type: 'sine', attack: 0.005, decay: 0.07, gain: 0.05 * bub, glide: f0 * 1.7, pan: S.bubbles.pan, delay: i * randRange(0.05, 0.12) }); }
+    }
+    set('hiss', S.hiss.level * 0.018);
+    // kapağın altında su
+    set('slosh', S.slosh.level * 0.22 * (0.55 + 0.45 * Math.sin(this.t * 0.9) * Math.sin(this.t * 0.37 + 1)));
+    // çatıya / cama vuran yağmur
+    const rr = S.roofRain.level;
+    set('roofRain', rr * 0.13);
+    if (rr > 0.05 && Math.random() < dt * 9 * rr) this.noise({ type: 'bandpass', freq: randRange(2500, 6000), q: 3, attack: 0.001, decay: 0.02, gain: 0.04 * rr, pan: randRange(-0.7, 0.7) });
+  }
+
+  // --- küçük ayrıntılı efektler ---
+  creak(gain = 1) {
+    const f0 = randRange(150, 240);
+    this.tone(f0, { type: 'triangle', attack: 0.06, decay: randRange(0.25, 0.45), gain: 0.03 * gain, glide: f0 * randRange(1.1, 1.35) });
+    this.noise({ type: 'bandpass', freq: randRange(700, 1100), q: 9, attack: 0.05, decay: 0.3, gain: 0.05 * gain });
+  }
+  door(open = true) {
+    const f0 = open ? 260 : 340;
+    this.tone(f0, { type: 'sawtooth', attack: 0.08, decay: 0.55, gain: 0.018, glide: open ? 380 : 230 });
+    this.noise({ type: 'bandpass', freq: 900, q: 10, attack: 0.08, decay: 0.5, gain: 0.05 });
+    this.tone(85, { type: 'sine', attack: 0.004, decay: 0.25, gain: 0.25, delay: open ? 0.55 : 0.05 });
+    this.noise({ buffer: 'brown', type: 'lowpass', freq: 380, attack: 0.004, decay: 0.15, gain: 0.25, delay: open ? 0.55 : 0.05 });
+    this.tone(2400, { type: 'square', attack: 0.001, decay: 0.03, gain: 0.02, delay: open ? 0.6 : 0.1 });
+  }
+  thud() {
+    this.tone(95, { type: 'sine', attack: 0.003, decay: 0.18, gain: 0.22 });
+    this.noise({ buffer: 'brown', type: 'lowpass', freq: 500, attack: 0.003, decay: 0.12, gain: 0.25 });
+  }
+  chest() {
+    this.creak(1.2);
+    this.noise({ type: 'bandpass', freq: 1800, q: 3, attack: 0.002, decay: 0.05, gain: 0.08, delay: 0.3 });
+  }
+  rustle() {
+    for (let i = 0; i < 5; i++) this.noise({ type: 'bandpass', freq: randRange(2500, 5000), q: 1.2, attack: 0.01, decay: randRange(0.05, 0.12), gain: 0.07, delay: i * randRange(0.06, 0.12) });
+  }
+  sizzle() {
+    this.noise({ type: 'highpass', freq: 3000, q: 0.5, attack: 0.08, decay: 1.6, gain: 0.12 });
+    for (let i = 0; i < 6; i++) this.noise({ type: 'bandpass', freq: randRange(3000, 6000), q: 3, attack: 0.002, decay: 0.03, gain: 0.08, delay: randRange(0.05, 1.2) });
+  }
+  stairs(up = true) {
+    for (let i = 0; i < 6; i++) {
+      setTimeout(() => this.footstep('wood'), i * 140);
+      if (i === 2 || i === 4) setTimeout(() => this.creak(0.7), i * 140 + 30);
+    }
+    if (!up) setTimeout(() => this.thud(), 820);
+  }
+  chime() {
+    [784, 988, 1175].forEach((f, i) => this.tone(f, { type: 'sine', attack: 0.005, decay: 1.4, gain: 0.04, delay: i * 0.22, bus: this.reverb }));
+  }
+  vinyl() { this.noise({ type: 'highpass', freq: 4000, attack: 0.001, decay: 0.01, gain: 0.04 }); }
 
   // 0–100 arası ses düzeyleri
   setVolumes(v) {
@@ -94,6 +222,7 @@ class AudioEngine {
     const dl = ctx.createBiquadFilter(); dl.type = 'lowpass'; dl.frequency.value = 300;
     d1.connect(dl); d2.connect(dl); dl.connect(this.drone).connect(this.musicBus);
     d1.start(); d2.start();
+    this._initSpots();
     this.setVolumes({});
   }
 
@@ -146,6 +275,7 @@ class AudioEngine {
     this.rain.g.gain.setTargetAtTime(T.rain * 0.16, now, 0.5);
     this.ambFilter.frequency.setTargetAtTime(T.indoor ? 700 : 18000, now, 0.25);
     this.drone.gain.setTargetAtTime(this.musicOn ? (T.night * 0.06 + T.cave * 0.08) : 0, now, 2);
+    this._updateSpots(dt);
 
     // Üretken müzik
     if (this.musicOn) {
@@ -216,7 +346,16 @@ class AudioEngine {
       grass: { type: 'bandpass', freq: 2200, q: 0.6, gain: 0.04, decay: 0.08 },
       rock: { type: 'bandpass', freq: 800, q: 1.5, gain: 0.07, decay: 0.06 },
     }[surface] ?? { type: 'lowpass', freq: 900, q: 0.5, gain: 0.05, decay: 0.08 };
-    this.noise({ ...cfg, attack: 0.005, pan: randRange(-0.1, 0.1) });
+    if (surface === 'metal') {
+      // lamba odasının ızgara zemini: tınlayan metal adım
+      this.noise({ type: 'bandpass', freq: randRange(2200, 2700), q: 9, attack: 0.002, decay: 0.08, gain: 0.07 });
+      this.tone(randRange(900, 1300), { type: 'triangle', attack: 0.002, decay: 0.12, gain: 0.012 });
+      this.noise({ buffer: 'brown', type: 'lowpass', freq: 300, attack: 0.003, decay: 0.06, gain: 0.08 });
+      return;
+    }
+    // adımlarda küçük farklılıklar (aynı ses tekrar etmesin)
+    this.noise({ ...cfg, freq: cfg.freq * randRange(0.85, 1.15), gain: cfg.gain * randRange(0.8, 1.1), attack: 0.005, pan: randRange(-0.1, 0.1) });
+    if (surface === 'wood') this.noise({ buffer: 'brown', type: 'lowpass', freq: 220, attack: 0.003, decay: 0.07, gain: 0.07 });
   }
 
   splash(big = false) { this.noise({ buffer: 'white', type: 'bandpass', freq: big ? 700 : 1400, q: 0.8, attack: 0.01, decay: big ? 0.8 : 0.35, gain: big ? 0.3 : 0.18 }); }

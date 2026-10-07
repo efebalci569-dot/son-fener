@@ -192,7 +192,7 @@ export function buildLighthouseInterior(G) {
     rbx(g, 1.9, 0.25, 0.32, '#4a3020', 0, 2.35, FLOOR_INFO[0].r + 0.2);
     inter(0, DOOR.x, DOOR.z, {
       label: () => G.night.knock?.state === 'knocking' ? '🚪 Kapıyı aç' : '🚪 Dışarı çık', range: 1.1,
-      action: () => { if (G.night.doorEvent()) return; G.setArea('world', LIGHTHOUSE_X - 0.6); },
+      action: () => { if (G.night.doorEvent()) return; G.audio.door(false); G.setArea('world', LIGHTHOUSE_X - 0.6); },
     });
     // yatak
     dyn.bedOld = M.makeBed(false); dyn.bedOld.rotation.y = Math.PI / 2; dyn.bedOld.position.set(BED.x, 0, BED.z); g.add(dyn.bedOld);
@@ -212,7 +212,7 @@ export function buildLighthouseInterior(G) {
     // sandık
     dyn.chest = M.makeChest(); dyn.chest.rotation.y = -Math.PI / 2; dyn.chest.position.set(5.0, 0, -1.6); g.add(dyn.chest);
     block(0, 5.0, -1.6, 0.7, 1.1, () => S().hasChest);
-    inter(0, 4.1, -1.6, { enabled: () => S().hasChest, label: '📦 Sandık', action: () => G.ui.openChest() });
+    inter(0, 4.1, -1.6, { enabled: () => S().hasChest, label: '📦 Sandık', action: () => { G.audio.chest(); G.ui.openChest(); } });
   }
 
   // ================================================================= 1. KAT
@@ -536,7 +536,7 @@ export function buildLighthouseInterior(G) {
       label: J.floor === -1 ? '🧹 Çürük sandıklar — karıştır' : '🧹 Eski eşya yığını — temizle',
       action: () => {
         G.player.doAction(1.1);
-        G.audio.chop(); setTimeout(() => G.audio.noise({ type: 'bandpass', freq: 1400, q: 0.6, decay: 0.4, gain: 0.25 }), 350);
+        G.audio.rustle(); setTimeout(() => G.audio.thud(), 450); setTimeout(() => G.audio.rustle(), 700);
         setTimeout(() => {
           const s = S();
           s.flags['junk_' + J.id] = true;
@@ -693,6 +693,36 @@ export function buildLighthouseInterior(G) {
         if (q.life <= 0) { floors[q.floor].remove(q.m); q.m.geometry.dispose(); puffs.splice(i, 1); }
       }
       G.decor?.animate(dt, t);
+      // ---- konumlu iç mekân sesleri ----
+      if (G.area === area) {
+        const A = G.audio;
+        const near = (fl, lx, lz, maxD) => {
+          if (f !== fl) return [0, 0];
+          const sx = fc(fl) + lx, d = Math.hypot(P.x - sx, P.z - lz);
+          const k = Math.max(0, 1 - d / maxD);
+          return [k * k, (sx - P.x) / 5];
+        };
+        const fire = near(0, 5.05, 0.7, 10); A.setSpot('fire', st.flags.rep_soba ? fire[0] : 0, fire[1]);
+        const tick = near(0, -5.85, -0.9, 8); A.setSpot('tick', st.flags.rep_saat ? tick[0] : 0, tick[1]);
+        const hum = near(-1, 3.7, -2.6, 14);
+        A.setSpot('hum', st.flags.rep_jenerator ? (f === -1 ? 0.25 + hum[0] * 0.75 : f === 0 ? 0.12 : 0) : 0, hum[1]);
+        const gear = near(3, 0, -0.3, 8);
+        A.setSpot('gears', lit ? (f === 3 ? 0.3 + gear[0] * 0.7 : f === 2 ? 0.12 : 0) : 0, gear[1]);
+        const sl = near(-1, 0, 2.2, 4.5); A.setSpot('slosh', st.flags.hatchSealed ? sl[0] * 0.25 : sl[0], sl[1]);
+        // mobilyalar: akvaryum ve gaz lambası
+        let bub = [0, 0], hiss = [0, 0];
+        for (const rec of G.decor?.list(f) ?? []) {
+          if (rec.item === 'akvaryum') { const n = near(f, rec.x, rec.z, 5); if (n[0] > bub[0]) bub = n; }
+          if (rec.item === 'gaz_lambasi') { const n = near(f, rec.x, rec.z, 3.5); if (n[0] > hiss[0]) hiss = n; }
+        }
+        A.setSpot('bubbles', bub[0], bub[1]); A.setSpot('hiss', hiss[0], hiss[1]);
+        // çatıya/cama vuran yağmur: üst katlarda daha belirgin
+        A.setSpot('roofRain', G.weather.cur.rain * [0.15, 0.4, 0.55, 0.7, 1][f + 1]);
+        // saat başı çan (onarılmış saat)
+        const hr = Math.floor(G.hour);
+        if (st.flags.rep_saat && this._lastHr !== undefined && hr !== this._lastHr && f === 0) A.chime();
+        this._lastHr = hr;
+      }
       // ---- bodrum ----
       const inBase = f === -1 && G.area === area;
       G.audio.setAmbient({ cave: inBase ? 1 : 0 });

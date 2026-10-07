@@ -206,7 +206,7 @@ export class UI {
         else { this.toast(r.msg, 'warn'); G.audio.fail(); }
         break;
       }
-      case 'craft': { const r = G.craft.visible(this.panel.station).find(x => x.id === arg); if (r) G.craft.make(r); break; }
+      case 'craft': { const r = G.craft.visible(this.panel.station).find(x => x.id === arg); if (r && G.craft.make(r) && this.panel.station === 'soba') G.audio.sizzle(); break; }
       case 'buy': {
         const [id, nStr] = arg.split(':'); const n = +nStr;
         const it = this.panel.shop.find(x => x.id === id);

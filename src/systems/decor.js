@@ -165,7 +165,7 @@ export class Decor {
       const r2 = { uid: S.decorUid, ...rec };
       this.list(p.f).push(r2);
       this.spawn(p.f, r2);
-      G.audio.pickup(); G.audio.chop();
+      G.audio.thud(); G.audio.creak(0.5);
       const more = G.inv.has(p.item);
       const item = p.item, rot = p.rot;
       this.cancel(true);
@@ -188,6 +188,7 @@ export class Decor {
         G.audio.tone(n, { type: 'triangle', attack: 0.02, decay: 0.9, gain: 0.07, bus: G.audio.musicBus });
         if (this.noteI % 3 === 0) G.audio.tone(n / 2, { type: 'sine', attack: 0.02, decay: 1.2, gain: 0.05, bus: G.audio.musicBus });
         G.audio.noise({ type: 'highpass', freq: 5000, decay: 0.2, gain: 0.01 });
+        for (let k = 0; k < 3; k++) if (Math.random() < 0.6) setTimeout(() => G.audio.vinyl(), Math.random() * 400);
         this.noteT = 0.42;
       }
     }
